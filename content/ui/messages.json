@@ -7,5 +7,15 @@
   "start_btn": "يلا نبدأ",
   "back_btn": "رجوع",
   "unknown_label": "مش عارف",
-  "dont_know_label": "مش عارف"
+  "dont_know_label": "مش عارف",
+  "domain_study_label": "دراسة ومذاكرة",
+  "domain_study_desc": "مشاكل الدرجات، المذاكرة، تنظيم الوقت، التوتر قبل الامتحان",
+  "domain_project_label": "مشاريع وفرق",
+  "domain_project_desc": "تأخر المشاريع، تنظيم الفريق، تقسيم المهام، التواصل",
+  "domain_question": "إنت بتواجه مشكلة في إيه؟",
+  "domain_hint": "تقدر تختار المجال اللي يناسبك — كل مجال ليه أسئلته وحلوله",
+  "export_data_btn": "صدّر بياناتي للبحث",
+  "export_data_desc": "نزّل كل أحداث جلستك كملف JSON مجهول للبحث",
+  "export_data_success": "تم تصدير بياناتك للبحث",
+  "plan_saved_celebrate": "أحسنت! خطتك جاهزة — ابدأ بخطوة صغيرة النهاردة"
 }

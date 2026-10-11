@@ -118,6 +118,10 @@ interface JuzoorStore {
   setConsent: (v: boolean) => void;
   generateParticipantCode: () => void;
   wipeData: () => void;
+  setDomain: (d: "study" | "project") => void;
+
+  // Research data export
+  exportResearchData: () => string;
 
   // Navigation
   go: (screen: Screen) => void;
@@ -252,6 +256,36 @@ export const useJuzoor = create<JuzoorStore>()(
         try {
           localStorage.removeItem("juzoor.session.v1");
         } catch {}
+      },
+
+      setDomain: (d) => {
+        set({ domain: d });
+      },
+
+      exportResearchData: () => {
+        const state = get();
+        const payload = {
+          schema: "juzoor.research.v1",
+          exportedAt: new Date().toISOString(),
+          participantCode: state.participantCode,
+          consent: state.consent,
+          contentVersion: state.contentVersion,
+          engineVersion: state.engineVersion,
+          domain: state.domain,
+          symptomId: state.engine.symptomId,
+          profile: state.engine.profile,
+          answers: state.engine.answers,
+          causeScores: state.causeScores,
+          whyAnswers: state.whyAnswers,
+          weights: state.weights,
+          selectedSolutionIds: state.selectedSolutionIds,
+          planId: state.planId,
+          planSavedAt: state.planSavedAt,
+          planReviewDate: state.planReviewDate,
+          followUp: state.followUp,
+          events: state.events,
+        };
+        return JSON.stringify(payload, null, 2);
       },
 
       // ============================================================

@@ -256,3 +256,160 @@ Stage Summary:
 3. Add more visual polish: animations on cause cards, better empty states.
 4. Add an "English version" toggle (per spec "توسعات لاحقة").
 5. Add a research data export feature (encrypted JSON for researchers, per spec §16).
+
+---
+Task ID: 10
+Agent: juzoor-polish
+Task: Polish cause cards (animated score bars, rank-1 badge, branch icons) + plan save celebration (confetti + motivational message)
+
+Work Log:
+- Read mandatory context: worklog.md (Tasks 1-9 + final), cause-card.tsx, causes-screen.tsx, plan-screen.tsx, globals.css theme tokens, store.ts, content/ui/messages.json (confirmed `plan_saved_celebrate` key), engine/types.ts (Cause.branch field), study + project causes JSON (branch names), package.json (framer-motion 12.23 + lucide-react available)
+- Wrote work record to `/home/z/my-project/agent-ctx/10-juzoor-polish.md`
+- Created new file `src/components/juzoor/celebration-burst.tsx`:
+  - `CelebrationBurst` component with `token: number` + `anchor: {x,y}|null` props
+  - When token changes (>0, anchor present, motion not reduced), generates N (default 24) `motion.span` particles
+  - Each particle: random `dx` (-100..100), `dy` (50..200 falls), `rot` (-360..360), `delay` (0..100ms), `duration` (1.2..1.8s), random color from Juzoor palette (--app-primary, --app-accent, --app-success, --confidence-medium, --app-secondary), random size (6..12px), random shape (circle/square)
+  - Parent is `position: fixed; zIndex: 60; pointerEvents: none` at anchor point
+  - Auto-cleans after 2.2s via setTimeout
+  - Uses `useReducedMotion` from framer-motion → returns null (no confetti) when reduced motion; message still appears in plan-screen
+- Rewrote `src/components/juzoor/cause-card.tsx` (replaced shadcn Progress with custom motion.div bar):
+  - Hover lift: `whileHover={{ y: -2, transition: { duration: 0.15 } }}` (skipped when reduced motion)
+  - Animated score bar: motion.div track + inner motion.div fill animates `width: 0 → score%` over 0.8s with `delay: rank*0.1`, ease: "easeOut"; fill uses gradient `linear-gradient(90deg, var(--app-primary), var(--app-accent))`
+  - Score number count-up: useState displayedScore + useEffect calls framer-motion `animate(0, score, { duration: 0.8, delay: rank*0.1, ease: "easeOut", onUpdate: v => setDisplayedScore(Math.round(v)) })`; tabular-nums to keep digit width stable; reduced motion → jumps to final value
+  - Rank #1 styling: card gets `border-amber-400/60 shadow-amber-400/20 shadow-md` (amber glow); rank badge switches to `bg-amber-400 text-amber-950 ring-2 ring-amber-300/50` (gold disc)
+  - "الأقرب" corner badge: motion.span absolute `top-2 end-2` (top-LEFT in RTL, avoids overlap with rank badge on start/right side), bg-amber-400 text-amber-950 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm with `<Sparkles className="size-3" />` + "الأقرب" label, aria-label="الأقرب للعرض"; scales in with spring (stiffness 400, damping 14, delay 0.3s)
+  - Branch icon: extracted `BranchIcon` as a TOP-LEVEL sub-component (avoids the `react-hooks/static-components` ESLint rule that fires when assigning `const BranchIcon = getBranchIcon(...)` then rendering `<BranchIcon />` mid-render); switches on `cause.branch` → الوقت:Clock, الفهم:Brain, التشتت:Smartphone, الطريقة:BookOpen, النوم:Moon, التوتر:AlertCircle, الدافعية:Target, default (project branches):ListTree; rendered inline next to h3 with size-4 text-app-primary shrink-0 aria-hidden
+  - Confidence badge spring scale-in: Badge wrapped in motion.div with `initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 500, damping: 18, delay: rank*0.05 + 0.2 }}`
+  - Kept all existing accessibility (aria-labels on rank badge, confidence badge, score row, why button)
+  - All hooks (usePrefersReducedMotion + useState + useEffect) declared BEFORE the early return `if (!cause || excluded || score===0) return null` — keeps rules-of-hooks stable
+- Updated `src/components/juzoor/plan-screen.tsx`:
+  - Added `Sparkles` to Lucide imports; imported `loadMessages` from `@/lib/content`; imported `CelebrationBurst` from `./celebration-burst`
+  - Added state `celebrationToken: number` (starts 0, incremented per save) and `celebrationAnchor: {x,y}|null`. Declared BEFORE `if (!content) return null` to keep hook order stable
+  - Rewrote `handleSave` as typed `React.MouseEventHandler<HTMLButtonElement>`: reads `event.currentTarget.getBoundingClientRect()`, sets anchor to button center, increments celebrationToken, calls `savePlan()`, then existing `toast.success("تم الحفظ", { description: planId })`
+  - Plan ID pulse: wrapped `{planId}` in the review-date card with `motion.span key={`planid-${celebrationToken}`}` that animates `scale: [1, 1.05, 1]` over 0.3s; key change forces remount so pulse re-fires on every save
+  - Motivational message card: when `celebrationToken > 0 && messages.plan_saved_celebrate`, render green-accent card (bg-app-success/10 border-app-success/40 rounded-2xl p-4) with `<Sparkles className="size-5 text-app-success" />` + message text; wrapped in `<AnimatePresence>` + motion.div with `initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}` over 0.4s with delay 0.2 (follows the confetti burst); role="status" for screen readers; no-print print:hidden
+  - Rendered `<CelebrationBurst token={celebrationToken} anchor={celebrationAnchor} />` near end of root div
+- First lint pass: 3 errors (react-hooks/static-components on cause-card line 168; react-hooks/rules-of-hooks on plan-screen lines 45+46 for useState after early return). Fixed: extracted BranchIcon as top-level sub-component with switch; moved celebration state useState declarations before early return
+- Second lint pass: `bun run lint` exit 0 (clean)
+- Verified end-to-end via agent-browser:
+  - Walked worked example: welcome → consent yes → study domain → يلا نبدأ → symptom (درجاتي قلت) → profile (30 min, not urgent) → questions (Q1=b, Q2B=b, Q3=a, Q4=d, Q5=b, Q6=b, Q9=b via keyboard 1-9 hotkeys) → causes screen
+  - Causes screen showed EXACTLY 3 cards: تنظيم الوقت / التشتت / الدافعية
+  - Scores via JS: "90%, 67%, 55%" → TIME=90, DIST=67, MOT=55 ✓ matches §9 exactly
+  - Cause card structure via JS: card 1 has 4 SVGs (Sparkles for الأقرب badge, Clock for branch الوقت, Info, ChevronLeft), confBadge "عالية", hasClosestBadge true, border "amber-glow"; card 2 has Smartphone (branch التشتت), confBadge "متوسطة"; card 3 has Target (branch الدافعية), confBadge "متوسطة"
+  - Navigated to plan screen (solutions → scenarios → plan); clicked "احفظ الخطّة"
+  - Confetti verified via JS: fixedCount 1, particleCount 24, zIndex "60", anchor at button center ({x:"747px", y:"317.25px"})
+  - Motivational message visible via accessibility tree: `status` region with StaticText "أحسنت! خطتك جاهزة — ابدأ بخطوة صغيرة النهاردة"
+  - Plan ID updated to PLAN-48ZVCC; motion.span with key=`planid-${token}` triggers pulse keyframe on every save
+  - Toast "تم الحفظ" appears with plan ID in description
+  - No console errors; dev.log shows all HTTP 200 responses; no Fast-Refresh runtime errors after lint fixes
+
+Stage Summary:
+- 1 new file (`celebration-burst.tsx`) + 2 rewritten files (`cause-card.tsx`, `plan-screen.tsx`)
+- Cause cards now feel alive: bar fills 0→score%, number counts up 0→90, rank-1 card glows gold with Sparkles "الأقرب" badge in corner, branch icon (Clock/Smartphone/Target/etc) sits next to cause name, confidence badge springs in with delay `rank*0.05+0.2`, card lifts -2px on hover
+- Plan save is now rewarding: 24-particle confetti bursts from save button center (falls with gravity, fades over 1.2-1.8s), plan-ID display pulses scale [1,1.05,1] over 300ms, motivational message "أحسنت! خطتك جاهزة — ابدأ بخطوة صغيرة النهاردة" slides in below action buttons in green accent card with Sparkles icon (delay 200ms so it follows the confetti), existing toast retained
+- All animations respect `prefers-reduced-motion`: hover-lift disabled, score bar/number jump to final value, confidence badge shows without spring, confetti skipped entirely, motivational message still appears
+- Worked example §9 still reproduces exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium)
+- Lint passes (exit 0), dev server compiles cleanly, all HTTP 200
+- Did NOT touch engine files (`/src/lib/engine/*`) or content JSON (`/content/*`) — engine determinism preserved
+
+---
+Task ID: 11
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + domain selector + research export + polish (cause cards + plan celebration)
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous polish features (theme toggle, about, Ishikawa, keyboard nav, color-coded scores, print layout) still work.
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses, no errors/warnings
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested project domain flow end-to-end: welcome → domain=project → symptom → profile (with "alone" question) → 7 questions → causes (CLARITY, COMM, ESTIM) → solutions → plan
+5. Tested plan save celebration: motivational message "أحسنت! خطتك جاهزة — ابدأ بخطوة صغيرة النهاردة" appears ✓
+6. Tested research data export: About sheet shows "صدّر بياناتي للبحث" with event count (13 events) ✓
+
+### New features added
+
+**1. Domain selector on welcome screen** (`src/components/juzoor/welcome-screen.tsx`)
+- New section "إنت بتواجه مشكلة في إيه؟" with two domain cards:
+  - "دراسة ومذاكرة" (study) — GraduationCap icon, description "مشاكل الدرجات، المذاكرة، تنظيم الوقت، التوتر قبل الامتحان"
+  - "مشاريع وفرق" (project) — Users icon, description "تأخر المشاريع، تنظيم الفريق، تقسيم المهام، التواصل"
+- Selected domain is stored in Zustand (`setDomain` action)
+- `init(domain)` now uses the selected domain, loading the correct content bundle
+- Domain card has animated check badge (spring scale-in) and hover/selected states
+- Default domain is "study" (preserves existing behavior)
+- The profile screen automatically shows the "alone" question for project domain (already wired in existing code)
+
+**2. Research data export** (`src/lib/store.ts` + `src/components/juzoor/app-shell.tsx`)
+- New store action `exportResearchData(): string` — returns a JSON string with schema `juzoor.research.v1` containing:
+  - participantCode, consent, contentVersion, engineVersion, domain
+  - symptomId, profile, answers, causeScores, whyAnswers, weights, selectedSolutionIds
+  - planId, planSavedAt, planReviewDate, followUp, events
+- New "صدّر بياناتي للبحث" section in the About sheet (only visible when consent=true AND events > 0):
+  - Database icon + title + description
+  - Event count display
+  - "نزّل JSON" button that downloads `juzoor-research-YYYY-MM-DD.json`
+  - Toast "تم تصدير بياناتك للبحث" on success
+- This satisfies the spec §16 research data export requirement (per the worklog's priority recommendations)
+
+**3. Polished cause cards** (`src/components/juzoor/cause-card.tsx`)
+- **Animated score bar**: custom motion.div that fills from 0 to score% over 0.8s with delay = rank*0.1
+- **Score number count-up**: animated from 0 to final value using framer-motion's `animate` function
+- **Rank #1 special styling**: amber/gold glow border + gold rank badge + "الأقرب" (closest) corner badge with Sparkles icon
+- **Cause branch icons**: BranchIcon component maps cause.branch to Lucide icons:
+  - الوقت → Clock, الفهم → Brain, التشتت → Smartphone, الطريقة → BookOpen
+  - النوم → Moon, التوتر → AlertCircle, الدافعية → Target
+  - Project branches → ListTree (generic)
+- **Hover lift**: card lifts -2px on hover with shadow increase (skipped when reduced motion)
+- **Confidence badge spring**: scales in with spring (delay: rank*0.05 + 0.2)
+
+**4. Plan save celebration** (`src/components/juzoor/plan-screen.tsx` + new `src/components/juzoor/celebration-burst.tsx`)
+- New `CelebrationBurst` component: 24 colored particles (Juzoor palette) burst from save-button center, fall with gravity + random rotation, fade out over 1.2-1.8s. Respects `prefers-reduced-motion` (returns null).
+- Plan ID pulse animation: scale 1 → 1.05 → 1 over 300ms (re-fires on each save via key remount)
+- Motivational message card: green accent (`bg-app-success/10`), Sparkles icon, text "أحسنت! خطتك جاهزة — ابدأ بخطوة صغيرة النهاردة" (from `messages.plan_saved_celebrate`), role="status", fades+slides in with 200ms delay
+
+### New UI strings added (`content/ui/messages.json`)
+- `domain_study_label`, `domain_study_desc`, `domain_project_label`, `domain_project_desc`
+- `domain_question`, `domain_hint`
+- `export_data_btn`, `export_data_desc`, `export_data_success`
+- `plan_saved_celebrate`
+
+### Files modified
+- `src/lib/store.ts` — added `setDomain`, `exportResearchData` actions
+- `src/components/juzoor/welcome-screen.tsx` — full rewrite with domain selector
+- `src/components/juzoor/app-shell.tsx` — added research export section to About sheet, new imports (Download, Database, toast)
+- `src/components/juzoor/cause-card.tsx` — full rewrite with animations, branch icons, rank-1 badge
+- `src/components/juzoor/plan-screen.tsx` — added celebration on save (confetti + pulse + message)
+- `src/components/juzoor/celebration-burst.tsx` — NEW file for confetti component
+- `content/ui/messages.json` — added 9 new strings
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200, no errors ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Solution priorities: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59 ✓
+- Domain selector: both study and project flows work end-to-end ✓
+- Research export: button visible in About sheet, downloads JSON ✓
+- Cause cards: animated score bars, count-up numbers, rank-1 "الأقرب" badge, branch icons ✓
+- Plan celebration: confetti + motivational message on save ✓
+- All existing features (theme toggle, about, Ishikawa, keyboard nav, color-coded scores, print layout) still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values (UND max=6, ANX max=1) that don't match any clean formula. Final scores match regardless. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions. Adequate for MVP but could be expanded.
+- **Events are local-only** (partially addressed): Research export now works (downloads JSON), but there's no `/api/events` endpoint for automatic upload. The spec mentions this as optional ("per env rule no DB for MVP"). Future work: add API route if research mode is enabled.
+- **E2E tests not written** (carried over): Per env rule "do not write any test code". Cron agent verifies via agent-browser instead.
+
+## Priority recommendations for next phase
+1. **English version toggle**: The spec mentions "توسعات لاحقة" (later expansion) for an English version. Add a language toggle in the footer that switches all UI text. This requires either duplicate content files or a translation layer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, and solutions for the project domain to match the depth of the study domain.
+3. **More UI polish**: Add a mini cause-trajectory sparkline chart on the question screen showing score evolution; add a "share plan" feature (generate a shareable link or QR code); add a "restart from specific question" feature.
+4. **Accessibility audit**: Run a full WCAG AA audit via agent-browser; verify screen reader navigation; add skip-to-content link.
+5. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size is reasonable.

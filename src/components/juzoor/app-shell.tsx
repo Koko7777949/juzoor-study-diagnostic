@@ -15,10 +15,13 @@ import {
   Eye,
   Hand,
   Scale,
+  Download,
+  Database,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useJuzoor } from "@/lib/store";
 import { loadMessages, loadExplainText } from "@/lib/content";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -223,6 +226,9 @@ function AboutButton() {
   const [open, setOpen] = React.useState(false);
   const contentVersion = useJuzoor((s) => s.contentVersion);
   const engineVersion = useJuzoor((s) => s.engineVersion);
+  const consent = useJuzoor((s) => s.consent);
+  const exportResearchData = useJuzoor((s) => s.exportResearchData);
+  const eventsCount = useJuzoor((s) => s.events.length);
 
   const messages = React.useMemo(() => loadMessages(), []);
   const explainText = React.useMemo(() => loadExplainText(), []);
@@ -346,6 +352,45 @@ function AboutButton() {
                 إصدار المحرك: <span className="font-mono font-bold text-app-primary">{engineVersion}</span>
               </span>
             </section>
+
+            {/* Research data export — only show if user has data and consented */}
+            {consent && eventsCount > 0 && (
+              <section className="bg-app-accent/10 border border-app-accent/40 rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-start gap-2">
+                  <Database className="size-4 text-app-primary shrink-0 mt-0.5" aria-hidden="true" />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-app-text">{messages.export_data_btn}</p>
+                    <p className="text-xs text-app-secondary leading-relaxed mt-0.5">
+                      {messages.export_data_desc}
+                    </p>
+                    <p className="text-xs text-app-secondary mt-1">
+                      عدد الأحداث المسجلة: <span className="font-bold tabular-nums text-app-primary">{eventsCount}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="touch-target h-10 text-sm border-app-primary/30 text-app-primary hover:bg-app-primary/5 self-start"
+                  onClick={() => {
+                    const json = exportResearchData();
+                    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `juzoor-research-${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    toast.success(messages.export_data_success);
+                  }}
+                >
+                  <Download className="size-4" aria-hidden="true" />
+                  نزّل JSON
+                </Button>
+              </section>
+            )}
 
             <SheetClose asChild>
               <Button

@@ -2,12 +2,24 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Printer, Save, Calendar, Target, ChevronLeft, RefreshCw, Check } from "lucide-react";
+import {
+  Download,
+  Printer,
+  Save,
+  Calendar,
+  Target,
+  ChevronLeft,
+  RefreshCw,
+  Check,
+  Sparkles,
+} from "lucide-react";
 import { useJuzoor } from "@/lib/store";
 import { toast } from "sonner";
+import { loadMessages } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CelebrationBurst } from "./celebration-burst";
 import type { Solution } from "@/lib/engine/types";
 
 export function PlanScreen() {
@@ -20,13 +32,31 @@ export function PlanScreen() {
   const savePlan = useJuzoor((s) => s.savePlan);
   const exportPlan = useJuzoor((s) => s.exportPlan);
 
+  // Celebration state: a token that increments each time the user saves,
+  // plus the anchor (viewport coords) where the confetti should burst from.
+  // Declared BEFORE the early return to keep hook order stable.
+  const [celebrationToken, setCelebrationToken] = React.useState(0);
+  const [celebrationAnchor, setCelebrationAnchor] = React.useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
   if (!content) return null;
+
+  const messages = loadMessages();
 
   const selectedSolutions: Solution[] = selectedSolutionIds
     .map((id) => content.solutions.find((s) => s.id === id))
     .filter((s): s is Solution => Boolean(s));
 
-  const handleSave = () => {
+  const handleSave: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    const btn = event.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    setCelebrationAnchor({
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    });
+    setCelebrationToken((n) => n + 1);
     savePlan();
     toast.success("تم الحفظ", {
       description: `كود الخطة: ${useJuzoor.getState().planId}`,
@@ -118,8 +148,21 @@ export function PlanScreen() {
             <div className="flex items-center gap-2 text-xs text-app-secondary">
               <Save className="size-3.5 text-app-primary" aria-hidden="true" />
               <span>
-                كود الخطة: <span className="font-mono font-bold text-app-primary">{planId}</span> —
-                اتحفظت في {new Date(planSavedAt).toLocaleString("ar-EG")}
+                كود الخطة:{" "}
+                <motion.span
+                  key={`planid-${celebrationToken}`}
+                  initial={{ scale: 1 }}
+                  animate={
+                    celebrationToken > 0
+                      ? { scale: [1, 1.05, 1] }
+                      : { scale: 1 }
+                  }
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="font-mono font-bold text-app-primary inline-block"
+                >
+                  {planId}
+                </motion.span>{" "}
+                — اتحفظت في {new Date(planSavedAt).toLocaleString("ar-EG")}
               </span>
             </div>
           )}
@@ -168,6 +211,32 @@ export function PlanScreen() {
           <ChevronLeft className="size-4" aria-hidden="true" />
         </Button>
       </div>
+
+      {/* Celebration burst — confetti from the save button */}
+      <CelebrationBurst token={celebrationToken} anchor={celebrationAnchor} />
+
+      {/* Motivational message after save — green accent card with Sparkles */}
+      <AnimatePresence>
+        {celebrationToken > 0 && messages.plan_saved_celebrate && (
+          <motion.div
+            key={`celebrate-${celebrationToken}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
+            className="bg-app-success/10 border border-app-success/40 rounded-2xl p-4 flex items-start gap-3 no-print print:hidden"
+            role="status"
+          >
+            <Sparkles
+              className="size-5 text-app-success shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
+            <p className="text-sm font-medium text-app-text leading-relaxed">
+              {messages.plan_saved_celebrate}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <p className="text-xs text-app-secondary text-center leading-relaxed no-print print:hidden">
         القرار النهائي لك — اختر اللي يناسبك وعدّل عليه
