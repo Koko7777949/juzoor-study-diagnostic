@@ -18,6 +18,7 @@ import { useJuzoor } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CelebrationBurst } from "./celebration-burst";
+import { AnimatedNumber } from "./animated-number";
 
 export function DoneScreen() {
   const resetAll = useJuzoor((s) => s.resetAll);
@@ -231,7 +232,7 @@ export function DoneScreen() {
         />
       </motion.section>
 
-      {/* Stats grid — small quick numbers */}
+      {/* Stats grid — small quick numbers (with count-up animation) */}
       <motion.section
         initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -239,9 +240,43 @@ export function DoneScreen() {
         className="grid grid-cols-3 gap-2"
         aria-label="إحصائيات الرحلة"
       >
-        <StatCell label="عدد الأسئلة" value={answers.length} />
-        <StatCell label="أعلى سبب" value={`${topCausePct}%`} />
-        <StatCell label="عدد الحلول" value={selectedSolutions.length} />
+        <StatCell
+          label="عدد الأسئلة"
+          ariaLabel={`عدد الأسئلة ${answers.length}`}
+          value={
+            <AnimatedNumber
+              value={answers.length}
+              duration={1}
+              delay={0}
+              className="text-lg font-bold text-app-primary leading-none"
+            />
+          }
+        />
+        <StatCell
+          label="أعلى سبب"
+          ariaLabel={`أعلى سبب ${topCausePct} بالمئة`}
+          value={
+            <AnimatedNumber
+              value={topCausePct}
+              duration={1}
+              delay={0.15}
+              suffix="%"
+              className="text-lg font-bold text-app-primary leading-none"
+            />
+          }
+        />
+        <StatCell
+          label="عدد الحلول"
+          ariaLabel={`عدد الحلول ${selectedSolutions.length}`}
+          value={
+            <AnimatedNumber
+              value={selectedSolutions.length}
+              duration={1}
+              delay={0.3}
+              className="text-lg font-bold text-app-primary leading-none"
+            />
+          }
+        />
       </motion.section>
 
       {/* Thank-you card — the main focus */}
@@ -353,12 +388,21 @@ function JourneyTimeline({
 // StatCell — single stat in the small grid
 // ============================================================
 
-function StatCell({ label, value }: { label: string; value: React.ReactNode }) {
+function StatCell({
+  label,
+  value,
+  ariaLabel,
+}: {
+  label: string;
+  value: React.ReactNode;
+  ariaLabel?: string;
+}) {
   return (
-    <Card className="p-3 flex flex-col gap-1 items-center text-center bg-card">
-      <span className="text-lg font-bold text-app-primary tabular-nums leading-none">
-        {value}
-      </span>
+    <Card
+      className="p-3 flex flex-col gap-1 items-center text-center bg-card"
+      aria-label={ariaLabel}
+    >
+      <span className="leading-none">{value}</span>
       <span className="text-[11px] text-app-secondary leading-tight">
         {label}
       </span>

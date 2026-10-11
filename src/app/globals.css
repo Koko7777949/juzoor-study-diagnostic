@@ -207,6 +207,10 @@
       transparent 60%
     );
   }
+  .bg-app-pattern {
+    background-image: radial-gradient(circle, color-mix(in oklch, var(--app-primary) 4%, transparent) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
   .bg-card-gradient {
     background: linear-gradient(
       135deg,

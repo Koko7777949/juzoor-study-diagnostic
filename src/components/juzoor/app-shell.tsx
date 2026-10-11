@@ -108,7 +108,15 @@ export function AppShell() {
       };
 
   return (
-    <main className="min-h-screen flex flex-col bg-app-gradient">
+    <main className="relative min-h-screen flex flex-col bg-app-gradient">
+      {/* Subtle dot pattern overlay — barely visible, adds texture.
+          Fixed so it covers the viewport even when content scrolls;
+          pointer-events-none so it never blocks clicks/taps. */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-0 pointer-events-none opacity-30 bg-app-pattern print:hidden"
+      />
+
       {/* Skip-to-content link for keyboard / screen-reader users */}
       <a
         href="#main-content"
@@ -153,7 +161,11 @@ export function AppShell() {
       </header>
 
       {/* Screen content */}
-      <div id="main-content" className="flex-1 flex flex-col" tabIndex={-1}>
+      <div
+        id="main-content"
+        className="relative z-10 flex-1 flex flex-col"
+        tabIndex={-1}
+      >
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={screen}
@@ -170,7 +182,7 @@ export function AppShell() {
       </div>
 
       {/* Sticky footer */}
-      <footer className="mt-auto pt-3 pb-safe px-4 bg-app-bg border-t border-app-primary/10 no-print print:hidden">
+      <footer className="relative z-10 mt-auto pt-3 pb-safe px-4 bg-app-bg border-t border-app-primary/10 no-print print:hidden">
         <div className="max-w-md mx-auto flex items-center justify-between gap-2 py-1">
           <p className="text-xs text-app-secondary leading-relaxed">
             نظّم وقتك، افهم نفسك
