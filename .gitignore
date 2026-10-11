@@ -52,3 +52,8 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Requirements PDF (not needed in repo)
+/upload/
+
+# Agent context files (work-in-progress notes)
+/agent-ctx/
