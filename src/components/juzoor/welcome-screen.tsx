@@ -11,6 +11,10 @@ import {
   GraduationCap,
   Users,
   Check,
+  ListChecks,
+  Lightbulb,
+  Scale,
+  CalendarDays,
 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
 import { loadMessages } from "@/lib/content";
@@ -75,6 +79,46 @@ export function WelcomeScreen() {
       >
         {messages.welcome_intro}
       </motion.p>
+
+      {/* How it works — 4-step preview */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.18 }}
+        className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm"
+        aria-label="إزاي بيشتغل التطبيق"
+      >
+        <h2 className="text-sm font-bold text-app-text flex items-center gap-1.5">
+          <ListChecks className="size-4 text-app-primary" aria-hidden="true" />
+          الرحلة في 4 خطوات
+        </h2>
+        <ol className="flex flex-col gap-2.5">
+          <StepRow
+            num={1}
+            icon={<Lightbulb className="size-4" aria-hidden="true" />}
+            title="اختار المشكلة"
+            desc="من قائمة الأعراض الظاهرة"
+          />
+          <StepRow
+            num={2}
+            icon={<ListChecks className="size-4" aria-hidden="true" />}
+            title="جاوب الأسئلة"
+            desc="حتى 10 أسئلة سريعة بأختيارات جاهزة"
+          />
+          <StepRow
+            num={3}
+            icon={<Scale className="size-4" aria-hidden="true" />}
+            title="قارن الحلول"
+            desc="أسباب مرتبة وحلول بمقارنة واضحة"
+          />
+          <StepRow
+            num={4}
+            icon={<CalendarDays className="size-4" aria-hidden="true" />}
+            title="ابدأ خطة 7 أيام"
+            desc="خطوات صغيرة قابلة للتنفيذ"
+          />
+        </ol>
+      </motion.div>
 
       <Separator />
 
@@ -261,5 +305,39 @@ function DomainCard({
         </motion.span>
       )}
     </motion.button>
+  );
+}
+
+function StepRow({
+  num,
+  icon,
+  title,
+  desc,
+}: {
+  num: number;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <motion.li
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.25, delay: 0.2 + num * 0.06 }}
+      className="flex items-center gap-3"
+    >
+      <span className="shrink-0 flex items-center gap-2">
+        <span className="size-6 rounded-full bg-app-primary text-white flex items-center justify-center text-xs font-bold tabular-nums">
+          {num}
+        </span>
+        <span className="size-7 rounded-lg bg-app-primary/10 text-app-primary flex items-center justify-center">
+          {icon}
+        </span>
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-app-text leading-snug">{title}</p>
+        <p className="text-xs text-app-secondary leading-relaxed mt-0.5">{desc}</p>
+      </div>
+    </motion.li>
   );
 }

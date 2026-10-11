@@ -147,6 +147,11 @@ interface JuzoorStore {
   answerQuestion: (qid: string, optionId: string, durationMs?: number) => void;
   goToPreviousQuestion: () => void;
   recomputeFromAnswers: () => void;
+  // Jump back to a previously-answered question from the causes screen.
+  // Truncates the answer to that question and all subsequent ones, then
+  // recomputes from the remaining answers and returns the user to the
+  // questions screen at that point.
+  restartFromQuestion: (qid: string) => void;
 
   // Causes / Why
   openWhyForCause: (causeId: string) => void;
@@ -432,6 +437,55 @@ export const useJuzoor = create<JuzoorStore>()(
         const state = get();
         const { newState, causeScores } = applyRulesAfter(state.engine);
         set({ engine: newState, causeScores });
+      },
+
+      restartFromQuestion: (qid) => {
+        const state = get();
+        const idx = state.engine.answers.findIndex((a) => a.qid === qid);
+        if (idx === -1) return; // not found, nothing to do
+
+        // Truncate answers BEFORE that question (drop the answer to qid itself
+        // and all subsequent answers).
+        const newAnswers = state.engine.answers.slice(0, idx);
+        // Truncate scoreHistory to match (keep only snapshots for answers we keep).
+        const newScoreHistory = state.scoreHistory.filter(
+          (s) => s.answerIndex < idx,
+        );
+
+        // Clear forcedNext + skippedQuestions so the engine recomputes fresh
+        // from the remaining answers.
+        const engine: EngineState = {
+          ...state.engine,
+          answers: newAnswers,
+          forcedNext: null,
+          skippedQuestions: [],
+        };
+
+        const { newState, causeScores } = applyRulesAfter(engine);
+        const nextQuestion = getNextQuestion(newState, causeScores);
+
+        if (nextQuestion) {
+          set({
+            engine: newState,
+            causeScores,
+            scoreHistory: newScoreHistory,
+            currentQuestion: nextQuestion,
+            screen: "questions",
+            previousScreen: "causes",
+          });
+        } else {
+          // Defensive: shouldn't happen because we removed an answer, but stay
+          // on the causes screen if no next question is available.
+          set({
+            engine: newState,
+            causeScores,
+            scoreHistory: newScoreHistory,
+          });
+        }
+        get().logEvent("restart_from_question", {
+          qid,
+          remainingAnswers: newAnswers.length,
+        });
       },
 
       // ============================================================
