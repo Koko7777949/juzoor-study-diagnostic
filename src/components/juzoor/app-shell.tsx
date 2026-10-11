@@ -109,6 +109,14 @@ export function AppShell() {
 
   return (
     <main className="min-h-screen flex flex-col bg-app-bg">
+      {/* Skip-to-content link for keyboard / screen-reader users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:end-2 focus:z-50 focus:bg-app-primary focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:shadow-lg focus:text-sm focus:font-semibold"
+      >
+        تخطّى للمحتوى
+      </a>
+
       {/* Header */}
       <header className="pt-safe sticky top-0 z-30 bg-app-bg/95 backdrop-blur-sm border-b border-app-primary/10 no-print print:hidden">
         <div className="max-w-md mx-auto px-4 pt-3 pb-3 flex items-center gap-3">
@@ -145,7 +153,7 @@ export function AppShell() {
       </header>
 
       {/* Screen content */}
-      <div className="flex-1 flex flex-col">
+      <div id="main-content" className="flex-1 flex flex-col" tabIndex={-1}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={screen}

@@ -60,6 +60,14 @@ export interface JuzoorEvent {
   ts: number;
 }
 
+// A snapshot of all cause scores at a single point in time (after an answer).
+// Used by the mini cause-trajectory sparkline on the question screen.
+export interface ScoreSnapshot {
+  answerIndex: number;        // 0-based index into engine.answers
+  qid: string;                // the question that was just answered
+  scores: Record<string, number>; // causeId -> score (0..100), excluded/hidden causes omitted
+}
+
 // ============================================================
 // Store
 // ============================================================
@@ -107,6 +115,9 @@ interface JuzoorStore {
 
   // Events (local log)
   events: JuzoorEvent[];
+
+  // Score history (snapshots after each answer) — for the sparkline chart
+  scoreHistory: ScoreSnapshot[];
 
   // ============================================================
   // Actions
@@ -194,6 +205,7 @@ const initialState = () => ({
   planReviewDate: null as string | null,
   followUp: { executed: null, improved: null } as FollowUpState,
   events: [] as JuzoorEvent[],
+  scoreHistory: [] as ScoreSnapshot[],
 });
 
 export const useJuzoor = create<JuzoorStore>()(
@@ -226,6 +238,7 @@ export const useJuzoor = create<JuzoorStore>()(
           planReviewDate: null,
           followUp: { executed: null, improved: null },
           events: [],
+          scoreHistory: [],
           startedAt: Date.now(),
         });
         get().logEvent("session_start", {
@@ -348,6 +361,18 @@ export const useJuzoor = create<JuzoorStore>()(
         const stop = shouldStop(newState, causeScores);
         get().logEvent("question_answered", { qid, optionId, ms: durationMs ?? 0 });
 
+        // Snapshot the scores for the trajectory sparkline
+        const snapshot: ScoreSnapshot = {
+          answerIndex: newState.answers.length - 1,
+          qid,
+          scores: Object.fromEntries(
+            Object.entries(causeScores)
+              .filter(([, cs]) => !cs.excluded && cs.score > 0)
+              .map(([id, cs]) => [id, cs.score]),
+          ),
+        };
+        const scoreHistory = [...state.scoreHistory, snapshot];
+
         if (stop.stop) {
           // Move to causes screen with top 3
           const top = getRankingForDisplay(causeScores);
@@ -364,6 +389,7 @@ export const useJuzoor = create<JuzoorStore>()(
           set({
             engine: newState,
             causeScores,
+            scoreHistory,
             currentQuestion: null,
             screen: "causes",
             previousScreen: "questions",
@@ -372,6 +398,7 @@ export const useJuzoor = create<JuzoorStore>()(
           set({
             engine: newState,
             causeScores,
+            scoreHistory,
             currentQuestion: nextQuestion,
           });
         }
@@ -390,9 +417,12 @@ export const useJuzoor = create<JuzoorStore>()(
         };
         const { newState, causeScores } = applyRulesAfter(engine);
         const nextQuestion = getNextQuestion(newState, causeScores);
+        // Pop the last score snapshot
+        const scoreHistory = state.scoreHistory.slice(0, -1);
         set({
           engine: newState,
           causeScores,
+          scoreHistory,
           currentQuestion: nextQuestion,
         });
         get().logEvent("back_pressed", { remainingAnswers: newAnswers.length });
@@ -554,6 +584,7 @@ export const useJuzoor = create<JuzoorStore>()(
         planReviewDate: s.planReviewDate,
         followUp: s.followUp,
         events: s.events,
+        scoreHistory: s.scoreHistory,
       }),
       // On rehydrate, re-load the content bundle (it's not serializable cleanly)
       onRehydrateStorage: () => (state) => {

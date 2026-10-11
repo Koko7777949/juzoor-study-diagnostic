@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, HelpCircle, Flag, Keyboard, TrendingUp, TrendingDown } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { ChevronRight, HelpCircle, Flag, Keyboard, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
 import { loadMessages } from "@/lib/content";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import type { Question, Option, CauseScore } from "@/lib/engine/types";
 import { SupportNote } from "./support-note";
+import { CauseTrajectoryChart } from "./cause-trajectory-chart";
 
 const MAX_QUESTIONS = 10;
 
@@ -19,6 +20,7 @@ export function QuestionScreen() {
   const answers = useJuzoor((s) => s.engine.answers);
   const content = useJuzoor((s) => s.content);
   const causeScores = useJuzoor((s) => s.causeScores);
+  const scoreHistory = useJuzoor((s) => s.scoreHistory);
   const answerQuestion = useJuzoor((s) => s.answerQuestion);
   const goToPreviousQuestion = useJuzoor((s) => s.goToPreviousQuestion);
 
@@ -117,13 +119,8 @@ export function QuestionScreen() {
   });
 
   if (!currentQuestion || !q) {
-    return (
-      <div className="max-w-md mx-auto px-4 pt-12 pb-12 text-center text-app-secondary">
-        <p>جارٍ تجهيز السؤال…</p>
-      </div>
-    );
+    return <LoadingCard />;
   }
-
   const answeredCount = answers.length;
   const progressValue = Math.min(100, (answeredCount / MAX_QUESTIONS) * 100);
 
@@ -198,6 +195,14 @@ export function QuestionScreen() {
         </div>
         <Progress value={progressValue} className="bg-app-muted h-2" />
       </div>
+
+      {/* Mini cause-trajectory sparkline (shows after 2+ answers) */}
+      {scoreHistory.length >= 2 && (
+        <CauseTrajectoryChart
+          history={scoreHistory}
+          causeLabels={causeLabelMap}
+        />
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -388,5 +393,72 @@ function Kbd({ children }: { children: React.ReactNode }) {
     >
       {children}
     </kbd>
+  );
+}
+
+// ============================================================
+// LoadingCard — shown between questions or during stop transition.
+// Centered card with a spinning Loader2 icon, "بنحلل إجاباتك…" text,
+// and 3 small dots that pulse in sequence (staggered scale 0.8→1.2→0.8
+// over 1.5s, infinite loop). Respects prefers-reduced-motion: dots
+// render statically without animation, spinner still spins (CSS-based).
+// ============================================================
+function LoadingCard() {
+  const prefersReducedMotion = useReducedMotion();
+
+  return (
+    <div className="max-w-md mx-auto px-4 pt-16 pb-16 flex justify-center">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}
+        className="bg-card border border-border rounded-2xl shadow-sm px-6 py-8 flex flex-col items-center gap-4 w-full max-w-xs"
+        role="status"
+        aria-live="polite"
+      >
+        {/* Spinning loader icon */}
+        <Loader2
+          className="size-7 text-app-primary animate-spin"
+          aria-hidden="true"
+        />
+
+        {/* Loading text */}
+        <p className="text-sm font-semibold text-app-text text-center">
+          بنحلل إجاباتك…
+        </p>
+
+        {/* Three pulsing dots (staggered) — static when reduced motion */}
+        <div
+          className="flex items-center gap-1.5"
+          aria-hidden="true"
+        >
+          {[0, 1, 2].map((i) =>
+            prefersReducedMotion ? (
+              <span
+                key={i}
+                className="size-2 rounded-full bg-app-primary/60 inline-block"
+              />
+            ) : (
+              <motion.span
+                key={i}
+                className="size-2 rounded-full bg-app-primary inline-block"
+                initial={{ scale: 0.8 }}
+                animate={{ scale: [0.8, 1.2, 0.8] }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: i * 0.2,
+                }}
+              />
+            ),
+          )}
+        </div>
+
+        <p className="text-[10px] text-app-secondary text-center leading-relaxed">
+          ثانية، بنجهّز السؤال اللي جاي
+        </p>
+      </motion.div>
+    </div>
   );
 }

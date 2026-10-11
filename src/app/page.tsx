@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useJuzoor } from "@/lib/store";
 import { AppShell } from "@/components/juzoor/app-shell";
+import { JuzoorErrorBoundary } from "@/components/juzoor/error-boundary";
 
 export default function Home() {
   const content = useJuzoor((s) => s.content);
@@ -21,5 +22,9 @@ export default function Home() {
     if (!content && screen !== "welcome") init("study");
   }, [content, screen, init]);
 
-  return <AppShell />;
+  return (
+    <JuzoorErrorBoundary>
+      <AppShell />
+    </JuzoorErrorBoundary>
+  );
 }

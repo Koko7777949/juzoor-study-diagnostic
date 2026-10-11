@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Check,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
 import { toast } from "sonner";
@@ -29,6 +30,8 @@ export function PlanScreen() {
   const planSavedAt = useJuzoor((s) => s.planSavedAt);
   const planReviewDate = useJuzoor((s) => s.planReviewDate);
   const participantCode = useJuzoor((s) => s.participantCode);
+  const causeScores = useJuzoor((s) => s.causeScores);
+  const symptomId = useJuzoor((s) => s.engine.symptomId);
   const savePlan = useJuzoor((s) => s.savePlan);
   const exportPlan = useJuzoor((s) => s.exportPlan);
 
@@ -87,6 +90,36 @@ export function PlanScreen() {
     exportPlan("pdf");
     // Give the store a tick to persist the export event before invoking print
     window.print();
+  };
+
+  const handleShare = async () => {
+    const summary = buildShareSummary(selectedSolutions, {
+      planId,
+      reviewDate: planReviewDate,
+      participantCode,
+      causeScores,
+      content,
+      symptomId,
+    });
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(summary);
+        toast.success("تم نسخ ملخص الخطة", {
+          description: "تقدر تلصقه في أي مكان — رسالة، بريد، أو ملاحظة",
+        });
+      } else {
+        // Fallback: open a new window with the text
+        const w = window.open("", "_blank");
+        if (w) {
+          w.document.write(`<pre style="font-family: system-ui; white-space: pre-wrap; padding: 1rem; direction: rtl;">${summary.replace(/</g, "&lt;")}</pre>`);
+          w.document.title = "ملخص خطة جذور";
+        }
+      }
+    } catch {
+      toast.error("مش قادرين ننسخ الملخص", {
+        description: "جرّب تصدير الخطة كنص بدلاً من ذلك",
+      });
+    }
   };
 
   return (
@@ -190,15 +223,26 @@ export function PlanScreen() {
             صدّر كنص
           </Button>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="touch-target h-12 border-app-primary/30 text-app-primary hover:bg-app-primary/5"
-          onClick={handlePrint}
-        >
-          <Printer className="size-4" aria-hidden="true" />
-          اطبع / احفظ PDF
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="touch-target h-12 border-app-accent/50 text-app-primary hover:bg-app-accent/10"
+            onClick={handleShare}
+          >
+            <Share2 className="size-4" aria-hidden="true" />
+            شارك ملخص الخطة
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="touch-target h-12 border-app-primary/30 text-app-primary hover:bg-app-primary/5"
+            onClick={handlePrint}
+          >
+            <Printer className="size-4" aria-hidden="true" />
+            اطبع / احفظ PDF
+          </Button>
+        </div>
 
         <Button
           type="button"
@@ -391,6 +435,70 @@ function buildPlanText(
   lines.push("القرار النهائي لك — اختر اللي يناسبك وعدّل عليه.");
   lines.push("");
   lines.push("جذور — نظّم وقتك، افهم نفسك");
+  return lines.join("\n");
+}
+
+/**
+ * Build a concise share-friendly summary of the plan for clipboard / messaging.
+ * Shorter than buildPlanText — includes causes + selected solutions + review date
+ * but omits the full step-by-step timeline.
+ */
+function buildShareSummary(
+  solutions: Solution[],
+  meta: {
+    planId: string | null;
+    reviewDate: string | null;
+    participantCode: string | null;
+    causeScores: Record<string, { score: number; causeId: string }>;
+    content: { causes: { id: string; label_ar: string }[]; symptoms: { id: string; label_ar: string }[] } | null;
+    symptomId: string | null;
+  },
+): string {
+  const lines: string[] = [];
+  lines.push("🌱 خطتي على جذور");
+  lines.push("");
+
+  // Symptom
+  if (meta.content && meta.symptomId) {
+    const sym = meta.content.symptoms.find((s) => s.id === meta.symptomId);
+    if (sym) {
+      lines.push(`المشكلة: ${sym.label_ar}`);
+      lines.push("");
+    }
+  }
+
+  // Top causes (sorted by score desc, top 3)
+  const topCauses = Object.values(meta.causeScores)
+    .filter((cs) => cs.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  if (topCauses.length > 0 && meta.content) {
+    lines.push("الأسباب الأقرب:");
+    topCauses.forEach((cs, i) => {
+      const cause = meta.content!.causes.find((c) => c.id === cs.causeId);
+      const label = cause?.label_ar ?? cs.causeId;
+      lines.push(`  ${i + 1}. ${label} (${cs.score}%)`);
+    });
+    lines.push("");
+  }
+
+  // Selected solutions
+  lines.push("الحلول المختارة:");
+  solutions.forEach((sol, idx) => {
+    lines.push(`  ${idx + 1}. ${sol.label_ar} — ${sol.dailyMinutes} دقيقة/يوم`);
+  });
+  lines.push("");
+
+  // Review date
+  if (meta.reviewDate) {
+    lines.push(`📅 موعد المراجعة: بعد أسبوع (${meta.reviewDate})`);
+  }
+  if (meta.planId) {
+    lines.push(`كود الخطة: ${meta.planId}`);
+  }
+  lines.push("");
+  lines.push("جذور — نظّم وقتك، افهم نفسك");
+
   return lines.join("\n");
 }
 

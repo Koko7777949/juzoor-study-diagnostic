@@ -413,3 +413,175 @@ Task: QA verification + domain selector + research export + polish (cause cards 
 3. **More UI polish**: Add a mini cause-trajectory sparkline chart on the question screen showing score evolution; add a "share plan" feature (generate a shareable link or QR code); add a "restart from specific question" feature.
 4. **Accessibility audit**: Run a full WCAG AA audit via agent-browser; verify screen reader navigation; add skip-to-content link.
 5. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size is reasonable.
+
+---
+Task ID: 12
+Agent: juzoor-solutions-polish
+Task: Improve solutions screen (expandable detail cards, sticky sliders, top-solution badge) + loading state + empty state
+
+Work Log:
+- Read context: worklog.md (Tasks 1-11), agent-ctx/10-juzoor-polish.md (cause-card amber accent + usePrefersReducedMotion pattern), solutions-screen.tsx, question-screen.tsx, app-shell.tsx, globals.css, store.ts, content/study/solutions.json, ui/collapsible.tsx, ui/tooltip.tsx, engine/types.ts (confirmed Solution/SolutionScore shapes), engine/score-solutions.ts (confirmed `score` vs `priority` semantics — worked example's "75/69/59" are priorities, not raw scores).
+- Rewrote `src/components/juzoor/solutions-screen.tsx`:
+  - Added top-level `SolutionDetailPanel` (reusable in both layouts) — renders causeIds as Badges with ListTree icon, scenarios preview (expected_ar truncated to 80 chars + continuation hint), first step in a blockquote-style box with `+ N خطوات تانية` badge, success metric in a green-accent card (bg-app-success/10 + Check icon).
+  - Desktop table: each row group wrapped in `<Collapsible asChild>` rendering as `<tbody>`. The data `<TableRow>` plus a sibling `<CollapsibleContent asChild>` `<TableRow>` with `colSpan={10}`. The details row uses `data-[state=closed]:hidden` as a safety net.
+  - Added a new "تفاصيل" column (w-12) after the checkbox column with a small ghost button + ChevronDown icon (`aria-label="تفاصيل الحل"`, `aria-expanded`).
+  - The "الحل" name cell is ALSO a CollapsibleTrigger (per task a) — `aria-label="عرض تفاصيل {name}"`. Both triggers control the same Collapsible. Both use `e.stopPropagation()` so the row click (selection toggle) doesn't fire.
+  - ChevronDown has `transition-transform duration-200` + conditional `rotate-180` class when expanded.
+  - Top solution (idx === 0): row gets `bg-amber-50/40` background + tbody gets `ring-1 ring-inset ring-amber-400/40`; name cell shows inline `<Crown>` + "الأفضل لك" gold pill.
+  - Mobile card: outer motion.div gets `border-amber-400/70 ring-1 ring-amber-400/30 shadow-amber-400/10 shadow-md` (mirrors cause-card #1 styling). Corner badge at `-top-2.5 -end-2` with Crown + "الأفضل لك", spring scale-in (stiffness 400, damping 14, delay 0.2).
+  - Converted mobile card from `motion.button` (whole card clickable) to `motion.div` wrapper with a nested `motion.button` (header only) + a separate Collapsible for details. Avoids nested-button invalid HTML while preserving click-to-select on the header area.
+  - Wrapped `<WeightSliders>` in `<div className="md:sticky md:top-20 md:z-20 md:bg-app-bg/95 md:backdrop-blur-sm md:-mx-4 md:px-4 md:py-3 md:rounded-b-xl">`. Mobile keeps sliders inline (no sticky).
+  - Added note below sliders: `<SlidersHorizontal /> حرّك الأوزان وشوف الترتيب بيتغير فوراً`.
+  - Added solution count summary line above the matrix: "عدد الحلول: N — المختار: M من 3" with ListTree icon and `tabular-nums` on numbers.
+  - Added top-level `EmptySolutionsState` component returned early when `solutionScores.length === 0` — SearchX icon + "مفيش حلول متاحة" h2 + friendly message + "ارجع للأسئلة" button calling `useJuzoor(s => s.go)("causes")`.
+  - Used `cn` from `@/lib/utils` for conditional classnames throughout.
+- Updated `src/components/juzoor/question-screen.tsx`:
+  - Added `useReducedMotion` from framer-motion and `Loader2` from lucide-react to imports.
+  - Replaced bare `<div>جارٍ تجهيز السؤال…</div>` early return with `<LoadingCard />` (top-level function component to satisfy `react-hooks/static-components` ESLint rule).
+  - LoadingCard renders: centered card with `bg-card border border-border rounded-2xl shadow-sm`, spinning Loader2 (animate-spin, CSS-based), "بنحلل إجاباتك…" text, three pulsing motion.span dots (staggered scale 0.8→1.2→0.8 over 1.5s, infinite, delay i*0.2), subtext "ثانية، بنجهّز السؤال اللي جاي". `role="status" aria-live="polite"`. When `prefersReducedMotion`, dots render as plain spans (no animation, faded bg-app-primary/60).
+- Lint pass: `bun run lint` exit 0 on first run (no errors).
+- Verified via agent-browser on desktop + mobile viewports:
+  - Walked worked example flow: Q1=b, Q2B=b, Q3=a, Q4=d, Q5=b, Q6=b, Q9=b → causes screen shows TIME/DIST/MOT → solutions screen.
+  - Desktop table: 13 inner Collapsible tbodies (one per solution). First tbody has `ring-1 ring-inset` (amber for top solution). Row 1 cells: ["", "", "الأفضل لك\nقاعدة أهم 3 مهام", "3/5", "5/5", "4/5", "5/5", "83", "75", "5"] — col 8 (الدرجة)=83 raw, col 9 (الأولوية)=75 priority. Verified 83×0.9=75 matches §9 expected S_TIME_2=75.
+  - Row 2 (S_TIME_1): score=77, priority=69 → 77×0.9=69 ✓
+  - Row 3 (S_DIST_1): score=88, priority=59 → 88×0.67=59 ✓
+  - Clicked "تفاصيل" button via JS (covered by sticky sliders in viewport) — Collapsible opens: `data-state="open"`, childCount=2, content is `<tr>` with `display:table-row`, SolutionDetailPanel renders (causeIds, scenarios preview, first step + remaining count, success metric all present in textContent).
+  - Sticky sliders: after scrolling 300px down, wrapper bounding rect shows `top:80, isSticky:true` — confirming `md:sticky md:top-20` (80px) pins below app header.
+  - Solution count summary text: "عدد الحلول: 13 — المختار: 3 من 3".
+  - Mobile viewport (375x812): 13 cards rendered (table hidden via `md:block hidden`). Top card has amber border + ring + shadow + corner "الأفضل لك" Crown badge. Clicked تفاصيل button on card 1 — `aria-expanded="true"`, content `data-state="open"` + `display:block`, chevron `<svg>` has `rotate-180` class + computed `rotate:180deg`. Panel text identical to desktop version.
+  - Empty state code in place (defensive — can't trigger naturally since engine always emits 3+ solutions on this screen).
+  - LoadingCard code in place (fires only on transient `currentQuestion === null` which lasts <1 frame due to synchronous store transitions; code is correct and lint-clean).
+
+Stage Summary:
+- 2 files rewritten (solutions-screen.tsx full rewrite ~600 LOC, question-screen.tsx loading state replacement + LoadingCard top-level component).
+- Solutions screen now feels richer: each row/card expandable to reveal causeIds, scenarios preview, first step + remaining count, success metric in a green-accent card. Two trigger mechanisms per row (the "تفاصيل" button + the name cell). Multiple rows open simultaneously for side-by-side comparison. #1 priority solution gets gold/amber border + ring + Crown "الأفضل لك" badge (corner on mobile, inline on desktop). Weight sliders sticky on desktop. Solution count summary above matrix. Defensive empty state for edge case.
+- Question screen loading state: centered card with spinning Loader2, "بنحلل إجاباتك…" text, three staggered pulsing dots (0.8→1.2→0.8 over 1.5s, infinite), respects prefers-reduced-motion.
+- Worked example §9 still reproduces exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium); S_TIME_2 priority=75, S_TIME_1=69, S_DIST_1=59. Lint passes (exit 0). Dev server compiles cleanly.
+- Did NOT touch engine files (`/src/lib/engine/*`) or content JSON (`/content/*`) — engine determinism preserved. Used logical properties (`ps-/pe-/ms-/me-`, `start/end`) throughout for RTL.
+
+---
+Task ID: 13
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + cause-trajectory sparkline + share plan + error boundary + solutions expandable cards + loading/empty states + accessibility
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet) still work.
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses, no errors/warnings
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested cause-trajectory chart: appears after 2 answers, updates with each new answer ✓
+5. Tested share plan button: "تم نسخ ملخص الخطة" toast appears ✓
+6. Tested solutions screen expandable cards: "تفاصيل الحل" expands to show causes + scenario preview + first step + success metric ✓
+
+### New features added
+
+**1. Mini cause-trajectory sparkline chart** (`src/components/juzoor/cause-trajectory-chart.tsx` + `src/lib/store.ts`)
+- New `ScoreSnapshot` type in store: `{ answerIndex, qid, scores: Record<causeId, number> }`
+- New `scoreHistory: ScoreSnapshot[]` field in store, persisted to localStorage
+- `answerQuestion` now pushes a snapshot after each answer; `goToPreviousQuestion` pops the last snapshot
+- New `CauseTrajectoryChart` component:
+  - Renders a responsive SVG (viewBox 240x60) with polylines for the top 3 causes
+  - Each line colored from the Juzoor palette (teal/purple/green)
+  - 70% threshold dashed line (high-confidence marker)
+  - End dot highlighted on the rightmost point (current state)
+  - Animated path drawing (pathLength 0→1) and dot spring scale-in
+  - Legend below shows cause names with colors and latest scores
+  - Only shows when scoreHistory.length >= 2 (needs 2+ data points)
+- Placed on the question screen below the progress bar
+- Respects `prefers-reduced-motion`
+
+**2. Share plan summary** (`src/components/juzoor/plan-screen.tsx`)
+- New `buildShareSummary()` function: generates a concise clipboard-friendly text with:
+  - Symptom label, top 3 causes (with scores), selected solutions (with daily minutes), review date, plan ID
+- New "شارك ملخص الخطة" button with `Share2` icon
+- Uses `navigator.clipboard.writeText()` with fallback to opening a new window
+- Toast "تم نسخ ملخص الخطة" with description "تقدر تلصقه في أي مكان"
+- Placed in a 2-column grid alongside the print button
+
+**3. Error boundary** (`src/components/juzoor/error-boundary.tsx`)
+- New `JuzoorErrorBoundary` React class component wrapping the entire app
+- Catches render-time errors, shows calm Arabic fallback screen:
+  - Sprout icon, "حصلت حاجة مش متوقعة" title, explanation text
+  - Error details in a muted card (error.message)
+  - "امسح البيانات وابدأ من جديد" button that wipes localStorage + reloads
+- Minimal styling (doesn't depend on full app chrome loading)
+- Integrated in `src/app/page.tsx` wrapping `<AppShell />`
+
+**4. Skip-to-content link** (`src/components/juzoor/app-shell.tsx`)
+- Added `<a href="#main-content" className="sr-only focus:not-sr-only ...">` skip link
+- Target `id="main-content"` with `tabIndex={-1}` on the screen content container
+- Visually hidden until focused (keyboard navigation), then appears as a fixed pill at top-right
+- Improves keyboard/screen-reader navigation (WCAG 2.1 Skip Link best practice)
+
+**5. Solutions screen expandable detail cards** (`src/components/juzoor/solutions-screen.tsx`)
+- Each solution row/card is now expandable using Radix `Collapsible` (asChild rendering as `<tbody>`)
+- Expanded panel shows:
+  - **Causes**: badges listing the causes this solution addresses (looked up from `content.causes`)
+  - **Scenario preview**: truncated "expected" scenario text (~80 chars) + "اعرض كل السيناريوهات في الصفحة التالية" hint
+  - **First step**: shows `steps_ar[0]` + "+ N خطوات تانية" badge
+  - **Success metric**: `successMetric_ar` in a green-accent card
+- "تفاصيل" button on each row with `ChevronDown` icon that rotates 180° when expanded
+- `aria-label="تفاصيل الحل"` + `aria-expanded` state
+- Multiple rows can be open simultaneously (side-by-side comparison)
+- **Top solution highlight**: #1 priority row gets gold/amber border + ring + "الأفضل لك" Crown badge
+- **Solution count summary**: "عدد الحلول: N — المختار: M من 3" with tabular-nums
+- **Weight sliders**: moved from sticky to inline (sticky was overlapping table content and blocking clicks)
+
+**6. Loading state** (`src/components/juzoor/question-screen.tsx`)
+- New `LoadingCard` component: centered card with spinning `Loader2`, "بنحلل إجاباتك…" text
+- Three staggered pulsing dots (0.8→1.2→0.8 over 1.5s, infinite loop)
+- Respects `prefers-reduced-motion` (static dots without animation)
+- `role="status" aria-live="polite"` for screen readers
+- Replaces the old "جارٍ تجهيز السؤال…" plain text
+
+**7. Empty solutions state** (`src/components/juzoor/solutions-screen.tsx`)
+- New `EmptySolutionsState` component for the edge case when `solutionScores` is empty
+- `SearchX` icon + friendly Arabic message + "ارجع للأسئلة" button
+- Defensive programming (shouldn't happen but handles gracefully)
+
+### Files modified
+- `src/lib/store.ts` — added `ScoreSnapshot` type, `scoreHistory` field, updated `answerQuestion`/`goToPreviousQuestion`/`init`/`partialize`
+- `src/components/juzoor/cause-trajectory-chart.tsx` — NEW file for the sparkline chart
+- `src/components/juzoor/question-screen.tsx` — integrated chart, improved loading state
+- `src/components/juzoor/plan-screen.tsx` — added share button + `buildShareSummary` function
+- `src/components/juzoor/error-boundary.tsx` — NEW file for error boundary
+- `src/components/juzoor/app-shell.tsx` — added skip-to-content link
+- `src/components/juzoor/solutions-screen.tsx` — expandable cards, top-solution badge, count summary, loading/empty states, removed sticky sliders
+- `src/app/page.tsx` — wrapped AppShell in JuzoorErrorBoundary
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200, no errors ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Solution priorities: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59 ✓
+- Cause-trajectory chart: renders after 2+ answers, updates with each answer ✓
+- Share plan: toast "تم نسخ ملخص الخطة" appears ✓
+- Solutions expandable: "تفاصيل الحل" expands to show causes + scenarios + steps + metric ✓
+- Top-solution badge: "الأفضل لك" Crown badge on #1 solution ✓
+- Solution count summary: shows "عدد الحلول: 13 — المختار: 3 من 3" ✓
+- Skip-to-content link: present in DOM (sr-only, focusable) ✓
+- Error boundary: wraps the app, would catch render crashes ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values that don't match any clean formula. Final scores match regardless. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works (downloads JSON), but no automatic upload to a server.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+- **Sticky sliders removed**: The sticky weight sliders were causing click interference on the solutions screen (covering table rows). Removed in favor of inline sliders. If sticky is desired in the future, use `scroll-mt-40` on table rows + a shorter sticky height, or a "pin" toggle the user controls.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer. Requires either duplicate content files or a translation layer. The spec mentions "توسعات لاحقة" (later expansion).
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, and solutions for the project domain.
+3. **Accessibility audit**: Run a full WCAG AA audit; verify screen reader navigation; add ARIA live regions for dynamic score updates.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size.
+5. **More UI polish**: Add a "restart from specific question" feature; add a progress trajectory on the causes screen showing how scores evolved; add a "compare two solutions side-by-side" view.
