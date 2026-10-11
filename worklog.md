@@ -1375,3 +1375,44 @@ Task: QA verification + plan screen entrance animation + solution bookmark featu
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
 5. **Show bookmarks on done screen**: Add a "حلول مفضلة" section to the done screen journey summary.
 6. **Bookmark filter**: Add a "show only bookmarked" filter toggle on the solutions screen.
+
+---
+Task ID: 22
+Agent: main
+Task: Create README.md + LICENSE + verify site + push to GitHub
+
+Work Log:
+- Created comprehensive README.md (13.4 KB) with:
+  - Project overview and hard constraints
+  - Full feature list (core diagnostic flow, solution comparison, plan & follow-up, polish & accessibility)
+  - Architecture diagram with file tree
+  - Scoring formula (cause score, solution score, stop conditions)
+  - Getting started (installation, development, build)
+  - Worked example acceptance test table (verified ✅)
+  - Design system (colors, typography, confidence traffic lights)
+  - Privacy section
+  - Domains section (study + project)
+  - Tech stack table
+  - Contributing workflow
+  - MIT license reference
+- Created LICENSE file (MIT, copyright 2026 Koko7777949)
+- Updated layout.tsx metadata:
+  - Added keywords: "مذاكرة", "امتحانات"
+  - Changed author from "Z.ai" to "Koko7777949"
+  - Added repository URL
+  - Added OpenGraph tags (title, description, type, locale=ar_EG)
+- Verified site is working:
+  - bun run lint → exit 0
+  - Dev server: all HTTP 200
+  - agent-browser: wiped session, walked full worked-example flow
+  - Final scores: TIME=90, DIST=67, MOT=55 ✓
+  - Screenshot verified: 97.5% content ratio (not blank)
+- Committed: "docs: add README.md and LICENSE + update metadata" (3 files, 355 insertions)
+- Pushed to GitHub: commit 5c65aa9 pushed to main
+- Verified on GitHub API: README exists (13454 bytes), latest commit visible
+
+Stage Summary:
+- README.md and LICENSE are live on GitHub at https://github.com/Koko7777949/juzoor-study-diagnostic
+- Repository now has professional documentation visible to visitors
+- Site verified working (lint clean, HTTP 200, worked example matches, screenshot confirmed not blank)
+- All 14 commits pushed successfully
