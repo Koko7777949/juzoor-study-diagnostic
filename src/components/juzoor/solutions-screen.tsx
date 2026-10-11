@@ -16,6 +16,8 @@ import {
   GitCompare,
   Star,
   Lightbulb,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useJuzoor } from "@/lib/store";
@@ -441,6 +443,9 @@ function ComparisonTable({
         <TableHeader>
           <TableRow className="bg-app-muted">
             <TableHead className="text-center text-app-secondary font-semibold text-xs w-10">اختيار</TableHead>
+            <TableHead className="text-center text-app-secondary font-semibold text-xs w-10" aria-label="المفضلة">
+              <Bookmark className="size-3 inline" aria-hidden="true" />
+            </TableHead>
             <TableHead className="text-center text-app-secondary font-semibold text-xs w-12">تفاصيل</TableHead>
             <TableHead className="text-app-secondary font-semibold text-xs">الحل</TableHead>
             <TableHead className="text-center text-app-secondary font-semibold text-xs">الفاعلية</TableHead>
@@ -491,6 +496,15 @@ function ComparisonTable({
                         onCheckedChange={() => onToggle(sc.solutionId)}
                         onClick={(e) => e.stopPropagation()}
                         aria-label={`اختيار ${sol.label_ar}`}
+                      />
+                    </TableCell>
+
+                    {/* Bookmark cell */}
+                    <TableCell className="text-center px-1">
+                      <BookmarkButton
+                        solutionId={sc.solutionId}
+                        label={sol.label_ar}
+                        size="sm"
                       />
                     </TableCell>
 
@@ -579,7 +593,7 @@ function ComparisonTable({
                   {/* Details row — spans all 10 columns, hidden when collapsed */}
                   <CollapsibleContent asChild>
                     <TableRow className="data-[state=closed]:hidden">
-                      <TableCell colSpan={10} className="bg-app-muted/30">
+                      <TableCell colSpan={11} className="bg-app-muted/30">
                         <SolutionDetailPanel
                           solution={sol}
                           score={sc}
@@ -795,6 +809,15 @@ function SolutionCard({
           <span className="text-[10px] text-app-secondary">أولوية</span>
         </div>
       </motion.button>
+
+      {/* Bookmark button (mobile) */}
+      <div className="flex justify-end -mt-1">
+        <BookmarkButton
+          solutionId={solution.id}
+          label={solution.label_ar}
+          size="sm"
+        />
+      </div>
 
       {/* Ratings grid */}
       <div className="grid grid-cols-4 gap-2 text-center">
@@ -1435,5 +1458,56 @@ function SolutionComparisonDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ============================================================
+// BookmarkButton — lets the user bookmark a solution for later.
+// Bookmarks persist across sessions (not reset on init).
+// ============================================================
+
+function BookmarkButton({
+  solutionId,
+  label,
+  size = "sm",
+}: {
+  solutionId: string;
+  label: string;
+  size?: "sm" | "md";
+}) {
+  const bookmarkedSolutionIds = useJuzoor((s) => s.bookmarkedSolutionIds);
+  const toggleBookmark = useJuzoor((s) => s.toggleBookmark);
+  const isBookmarked = bookmarkedSolutionIds.includes(solutionId);
+
+  const iconSize = size === "sm" ? "size-4" : "size-5";
+  const btnSize = size === "sm" ? "size-8" : "size-9";
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleBookmark(solutionId);
+        toast.success(
+          isBookmarked ? "اتشال من المفضلة" : "اتضاف للمفضلة",
+          { description: label.length > 40 ? label.slice(0, 40) + "…" : label },
+        );
+      }}
+      className={cn(
+        "rounded-md inline-flex items-center justify-center transition-colors touch-target",
+        btnSize,
+        isBookmarked
+          ? "text-amber-500 hover:bg-amber-500/10"
+          : "text-app-secondary hover:text-app-primary hover:bg-app-primary/10",
+      )}
+      aria-label={isBookmarked ? `إزالة ${label} من المفضلة` : `إضافة ${label} للمفضلة`}
+      aria-pressed={isBookmarked}
+    >
+      {isBookmarked ? (
+        <BookmarkCheck className={iconSize} fill="currentColor" aria-hidden="true" />
+      ) : (
+        <Bookmark className={iconSize} aria-hidden="true" />
+      )}
+    </button>
   );
 }

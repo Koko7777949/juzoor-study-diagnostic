@@ -110,6 +110,9 @@ interface JuzoorStore {
   solutionScores: SolutionScore[];
   selectedSolutionIds: string[];
 
+  // Bookmarked solutions (user favorites — persists across sessions)
+  bookmarkedSolutionIds: string[];
+
   // Why-chain (five whys)
   whyAnswers: Record<string, WhyAnswer>;
   whyCurrentCauseId: string | null;
@@ -178,6 +181,7 @@ interface JuzoorStore {
   // Solutions
   setWeights: (w: { wE: number; wA: number; wS: number; wF: number }) => void;
   toggleSolution: (solutionId: string) => void;
+  toggleBookmark: (solutionId: string) => void;
   goToScenarios: () => void;
   goToPlan: () => void;
 
@@ -218,6 +222,7 @@ const initialState = () => ({
   causeScores: {} as Record<string, CauseScore>,
   solutionScores: [] as SolutionScore[],
   selectedSolutionIds: [] as string[],
+  bookmarkedSolutionIds: [] as string[],
   whyAnswers: {} as Record<string, WhyAnswer>,
   whyCurrentCauseId: null as string | null,
   whyStepIndex: 0,
@@ -252,6 +257,7 @@ export const useJuzoor = create<JuzoorStore>()(
           causeScores: {},
           solutionScores: [],
           selectedSolutionIds: [],
+          // Note: bookmarkedSolutionIds is NOT reset on init — bookmarks persist across sessions
           whyAnswers: {},
           whyCurrentCauseId: null,
           whyStepIndex: 0,
@@ -582,6 +588,15 @@ export const useJuzoor = create<JuzoorStore>()(
         set({ selectedSolutionIds: ids });
       },
 
+      toggleBookmark: (solutionId) => {
+        const state = get();
+        const ids = state.bookmarkedSolutionIds.includes(solutionId)
+          ? state.bookmarkedSolutionIds.filter((id) => id !== solutionId)
+          : [...state.bookmarkedSolutionIds, solutionId];
+        set({ bookmarkedSolutionIds: ids });
+        get().logEvent("bookmark_toggled", { solutionId, bookmarked: ids.includes(solutionId) });
+      },
+
       goToScenarios: () => {
         set({ screen: "scenarios", previousScreen: "solutions" });
       },
@@ -683,6 +698,7 @@ export const useJuzoor = create<JuzoorStore>()(
         causeScores: s.causeScores,
         solutionScores: s.solutionScores,
         selectedSolutionIds: s.selectedSolutionIds,
+        bookmarkedSolutionIds: s.bookmarkedSolutionIds,
         whyAnswers: s.whyAnswers,
         whyCurrentCauseId: s.whyCurrentCauseId,
         whyStepIndex: s.whyStepIndex,

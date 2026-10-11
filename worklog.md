@@ -1299,3 +1299,79 @@ Task: QA verification + quick restart button on done screen + profile screen ent
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
 5. **Daily streak notifications**: Add browser notification API for daily check-in reminders.
 6. **More entrance animations**: Apply the staggered entrance pattern to the scenarios screen and plan screen for consistency.
+
+---
+Task ID: 21
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + plan screen entrance animation + solution bookmark feature
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features still work (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states, review answers, trajectory recap, how-it-works onboarding, daily check-in streak, journey summary, side-by-side comparison dialog, date-based check-in scoping, follow-up diagnosis recap, gradient backgrounds, study tips, why-chain enhancement, animated counters, background pattern, quick restart, profile animations).
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses, no errors/warnings
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested bookmark feature: bookmark column header present, clicking bookmark button toggles state + shows toast ✓
+5. Tested bookmark persistence: reloaded page, bookmark state preserved ✓
+
+### New features / polish added
+
+**1. Solution bookmark feature** (`src/lib/store.ts` + `src/components/juzoor/solutions-screen.tsx`)
+- New `bookmarkedSolutionIds: string[]` field in store, persisted to localStorage
+- New `toggleBookmark(solutionId)` action:
+  - Toggles the solution ID in the `bookmarkedSolutionIds` array
+  - Logs `bookmark_toggled` event with `{ solutionId, bookmarked }`
+  - **NOT reset on `init`** — bookmarks persist across sessions (unlike `selectedSolutionIds`)
+- New `BookmarkButton` component:
+  - Renders a `Bookmark` icon (outline) when not bookmarked, `BookmarkCheck` (filled) when bookmarked
+  - Amber color when bookmarked, muted when not
+  - `aria-label` dynamically updates: "إضافة {label} للمفضلة" / "إزالة {label} من المفضلة"
+  - `aria-pressed` reflects bookmark state
+  - Toast on toggle: "اتضاف للمفضلة" / "اتشال من المفضلة"
+  - `stopPropagation` to prevent triggering the row click
+- Placed in both layouts:
+  - **Desktop table**: new bookmark column (w-10) between the "اختيار" checkbox column and the "تفاصيل" column, with a `Bookmark` icon in the header
+  - **Mobile card**: bookmark button below the header, right-aligned
+- Updated `colSpan` from 10 to 11 in the details row to account for the new column
+
+**2. Plan screen header entrance animation** (`src/components/juzoor/plan-screen.tsx`)
+- Converted the `<header>` to `<motion.header>` with `initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}` over 0.3s
+- Creates a smooth fade+slide entrance when the plan screen mounts
+- Consistent with the profile screen animations added in Task 20
+
+### Files modified
+- `src/lib/store.ts` — `bookmarkedSolutionIds` field, `toggleBookmark` action, persistence in partialize
+- `src/components/juzoor/solutions-screen.tsx` — `Bookmark`/`BookmarkCheck` imports, bookmark column in ComparisonTable, bookmark button in SolutionCard, `BookmarkButton` component, colSpan update
+- `src/components/juzoor/plan-screen.tsx` — header converted to motion.header with entrance animation
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200, no errors ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Bookmark toggle: aria-label changes, toast appears ✓
+- Bookmark persistence: state preserved after reload ✓
+- Plan header animation: smooth fade+slide ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values. Final scores match. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works, no automatic upload.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+- **Bookmarks not shown on done screen**: The bookmarked solutions aren't displayed in the journey summary on the done screen. A future agent could add a "حلول مفضلة" section to the done screen showing the user's bookmarks.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, solutions.
+3. **Accessibility audit**: Full WCAG AA audit; verify screen reader navigation.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
+5. **Show bookmarks on done screen**: Add a "حلول مفضلة" section to the done screen journey summary.
+6. **Bookmark filter**: Add a "show only bookmarked" filter toggle on the solutions screen.

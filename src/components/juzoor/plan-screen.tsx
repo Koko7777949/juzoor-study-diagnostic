@@ -147,12 +147,17 @@ export function PlanScreen() {
   return (
     <div className="max-w-md mx-auto px-4 pt-6 pb-12 flex flex-col gap-5 print:max-w-none print:px-8 print:gap-6">
       {/* On-screen header (hidden when printing) */}
-      <header className="flex flex-col gap-1.5 pt-2 no-print print:hidden">
+      <motion.header
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col gap-1.5 pt-2 no-print print:hidden"
+      >
         <h1 className="text-2xl font-bold text-app-text leading-snug">خطتك لمدة 7 أيام</h1>
         <p className="text-sm text-app-secondary leading-relaxed">
           خطوات صغيرة كل يوم، أكتر من 20 دقيقة للخطوة
         </p>
-      </header>
+      </motion.header>
 
       {/* Print-only header block — prominent, with plan IDs */}
       <div className="hidden print:block border-b-2 border-black pb-3 mb-2">
