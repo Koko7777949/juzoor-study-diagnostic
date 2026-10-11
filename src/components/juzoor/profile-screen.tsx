@@ -48,7 +48,12 @@ export function ProfileScreen() {
 
   return (
     <div className="max-w-md mx-auto px-4 pt-6 pb-12 flex flex-col gap-5">
-      <header className="flex flex-col gap-1.5 pt-2">
+      <motion.header
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col gap-1.5 pt-2"
+      >
         <h1 className="text-2xl font-bold text-app-text leading-snug">خطوة سريعة عنك</h1>
         <p className="text-sm text-app-secondary leading-relaxed">
           عشان نقترح الحلول الأنسب لك
@@ -58,10 +63,16 @@ export function ProfileScreen() {
             المشكلة: {symptomLabel}
           </p>
         )}
-      </header>
+      </motion.header>
 
       {/* Minutes per day */}
-      <section className="flex flex-col gap-3" aria-labelledby="minutes-label">
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="flex flex-col gap-3"
+        aria-labelledby="minutes-label"
+      >
         <div className="flex items-center gap-2" id="minutes-label">
           <Clock className="size-5 text-app-primary" aria-hidden="true" />
           <h2 className="text-base font-semibold text-app-text">
@@ -94,10 +105,16 @@ export function ProfileScreen() {
             );
           })}
         </RadioGroup>
-      </section>
+      </motion.section>
 
       {/* Urgent */}
-      <section className="flex flex-col gap-3" aria-labelledby="urgent-label">
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        className="flex flex-col gap-3"
+        aria-labelledby="urgent-label"
+      >
         <div className="flex items-center gap-2" id="urgent-label">
           <AlertTriangle className="size-5 text-app-primary" aria-hidden="true" />
           <h2 className="text-base font-semibold text-app-text">
@@ -132,11 +149,17 @@ export function ProfileScreen() {
             );
           })}
         </RadioGroup>
-      </section>
+      </motion.section>
 
       {/* Alone (project only) */}
       {showAlone && (
-        <section className="flex flex-col gap-3" aria-labelledby="alone-label">
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          className="flex flex-col gap-3"
+          aria-labelledby="alone-label"
+        >
           <div className="flex items-center gap-2" id="alone-label">
             <UserCircle2 className="size-5 text-app-primary" aria-hidden="true" />
             <h2 className="text-base font-semibold text-app-text">
@@ -171,34 +194,41 @@ export function ProfileScreen() {
               );
             })}
           </RadioGroup>
-        </section>
+        </motion.section>
       )}
 
-      <Card className="mt-2 p-4 bg-card-gradient shadow-card-soft border-app-accent/30">
-        <p className="text-xs text-app-secondary leading-relaxed">
-          إجاباتك بتساعدنا نفلتر الحلول اللي تناسب وقتك. تقدر ترجع تعدّلها بعدين.
-        </p>
-      </Card>
-
-      <Button
-        type="button"
-        disabled={!canStart}
-        className="touch-target h-12 text-base bg-app-primary text-white hover:bg-app-primary/90"
-        onClick={handleStart}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: showAlone ? 0.4 : 0.3 }}
+        className="flex flex-col gap-3"
       >
-        ابدأ الأسئلة
-        <ChevronRight className="size-5" aria-hidden="true" />
-      </Button>
+        <Card className="mt-2 p-4 bg-card-gradient shadow-card-soft border-app-accent/30">
+          <p className="text-xs text-app-secondary leading-relaxed">
+            إجاباتك بتساعدنا نفلتر الحلول اللي تناسب وقتك. تقدر ترجع تعدّلها بعدين.
+          </p>
+        </Card>
 
-      <Button
-        type="button"
-        variant="ghost"
-        className="touch-target text-app-secondary hover:text-app-primary"
-        onClick={() => go("symptom")}
-      >
-        <ChevronRight className="size-4" aria-hidden="true" />
-        رجوع لاختيار المشكلة
-      </Button>
+        <Button
+          type="button"
+          disabled={!canStart}
+          className="touch-target h-12 text-base bg-app-primary text-white hover:bg-app-primary/90"
+          onClick={handleStart}
+        >
+          ابدأ الأسئلة
+          <ChevronRight className="size-5" aria-hidden="true" />
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          className="touch-target text-app-secondary hover:text-app-primary"
+          onClick={() => go("symptom")}
+        >
+          <ChevronRight className="size-4" aria-hidden="true" />
+          رجوع لاختيار المشكلة
+        </Button>
+      </motion.div>
     </div>
   );
 }

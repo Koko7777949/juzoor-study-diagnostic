@@ -12,6 +12,7 @@ import {
   ListTodo,
   Calendar,
   MessageSquareReply,
+  Repeat,
   type LucideIcon,
 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
@@ -24,6 +25,8 @@ export function DoneScreen() {
   const resetAll = useJuzoor((s) => s.resetAll);
   const wipeData = useJuzoor((s) => s.wipeData);
   const go = useJuzoor((s) => s.go);
+  const init = useJuzoor((s) => s.init);
+  const domain = useJuzoor((s) => s.domain);
 
   // Journey data — drawn from the persisted store so the summary
   // survives a reload and reflects everything the user did.
@@ -67,6 +70,13 @@ export function DoneScreen() {
   const handleNew = () => {
     resetAll();
     go("welcome");
+  };
+  const handleQuickRestart = () => {
+    // Preserve the domain and jump straight to the symptom screen
+    const d = domain;
+    resetAll();
+    init(d);
+    go("symptom");
   };
   const handleWipe = () => {
     wipeData();
@@ -302,6 +312,15 @@ export function DoneScreen() {
           >
             <RotateCcw className="size-4" aria-hidden="true" />
             ابدأ رحلة جديدة
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="touch-target h-11 border-app-primary/30 text-app-primary hover:bg-app-primary/5"
+            onClick={handleQuickRestart}
+          >
+            <Repeat className="size-4" aria-hidden="true" />
+            جرّب تاني بنفس المجال
           </Button>
           <Button
             type="button"

@@ -1218,3 +1218,84 @@ Task: QA verification + why-chain screen enhancement + animated counters on done
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
 5. **Daily streak notifications**: Add browser notification API for daily check-in reminders.
 6. **Why-chain pulse animation**: Add a subtle pulse animation on the active step circle if not yet implemented.
+
+---
+Task ID: 20
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + quick restart button on done screen + profile screen entrance animations
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features still work (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states, review answers, trajectory recap, how-it-works onboarding, daily check-in streak, journey summary, side-by-side comparison dialog, date-based check-in scoping, follow-up diagnosis recap, gradient backgrounds, study tips, why-chain enhancement, animated counters, background pattern).
+- Confirmed the why-chain pulse animation was already implemented by Task 19's subagent (scale: [1, 1.05, 1] infinite 2s loop on active step circle, respects prefers-reduced-motion).
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses, no errors/warnings
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested done screen quick restart button: "جرّب تاني بنفس المجال" appears, clicking it goes to symptom screen preserving the study domain ✓
+5. Tested profile screen entrance animations: header and sections animate in with staggered delays ✓
+6. Verified worked example still matches after quick restart: TIME=90, DIST=67, MOT=55 ✓
+
+### New features / polish added
+
+**1. Quick restart button on done screen** (`src/components/juzoor/done-screen.tsx`)
+- New "جرّب تاني بنفس المجال" (Try again with same domain) button on the done screen
+- Placed between "ابدأ رحلة جديدة" (primary) and "امسح بياناتي واخرج" (ghost)
+- Uses `Repeat` icon from lucide-react
+- Outline button style: `border-app-primary/30 text-app-primary hover:bg-app-primary/5`
+- Handler `handleQuickRestart`:
+  - Captures the current domain from the store
+  - Calls `resetAll()` to clear all session state
+  - Calls `init(domain)` to reload content for the same domain
+  - Navigates directly to the symptom screen (skips welcome)
+- This is a UX improvement for users who want to try again quickly without going through the welcome + consent + domain selection flow again
+
+**2. Profile screen entrance animations** (`src/components/juzoor/profile-screen.tsx`)
+- Added staggered fade+slide entrance animations to all profile screen sections:
+  - Header: delay 0s
+  - Minutes per day section: delay 0.1s
+  - Urgent section: delay 0.2s
+  - Alone section (project only): delay 0.3s
+  - Info card + buttons: delay 0.4s (or 0.3s if no alone section)
+- Each section: `initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}` with 0.3s duration
+- Creates a cascading reveal effect that makes the screen feel more dynamic
+- Replaced `<header>` with `<motion.header>`, `<section>` with `<motion.section>`, added `<motion.div>` wrapper for the card + buttons
+
+**3. Verified why-chain pulse animation** (already implemented)
+- Confirmed the active step circle has a `scale: [1, 1.05, 1]` infinite pulse animation
+- 2s duration, easeInOut, respects `prefers-reduced-motion`
+- Implemented in Task 19 by the subagent
+
+### Files modified
+- `src/components/juzoor/done-screen.tsx` — added `Repeat` import, `init`/`domain` store selectors, `handleQuickRestart` handler, quick restart button
+- `src/components/juzoor/profile-screen.tsx` — wrapped all sections in motion elements with staggered entrance animations
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200, no errors ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓ (verified before and after quick restart)
+- Quick restart button: present, functional, goes to symptom screen ✓
+- Profile animations: staggered entrance on all sections ✓
+- Why-chain pulse animation: confirmed working ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values. Final scores match. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works, no automatic upload.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, solutions.
+3. **Accessibility audit**: Full WCAG AA audit; verify screen reader navigation.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
+5. **Daily streak notifications**: Add browser notification API for daily check-in reminders.
+6. **More entrance animations**: Apply the staggered entrance pattern to the scenarios screen and plan screen for consistency.
