@@ -1,0 +1,11 @@
+[
+  {
+    "id": "R_alone",
+    "if": { "flag": "alone" },
+    "then": [
+      { "excludeCause": "ROLES" },
+      { "excludeCause": "COMM" }
+    ],
+    "explain_ar": "لأن مشروعك فردي، استبعدنا الأسباب المتعلقة بتوزيع الأدوار والتواصل داخل الفريق"
+  }
+]

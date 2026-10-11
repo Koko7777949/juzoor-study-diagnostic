@@ -1,0 +1,28 @@
+[
+  {
+    "id": "project_late",
+    "domain": "project",
+    "label_ar": "مشروعي بيتأخر",
+    "description_ar": "مشروعك الدراسي أو التطوعي بدأ يتأخر عن ميعاده.",
+    "entryQuestionId": "QP1",
+    "icon": "clock"
+  },
+  {
+    "id": "unorganized_team",
+    "domain": "project",
+    "label_ar": "فريقي مش منظّم",
+    "description_ar": "الفريق بتاعك مشتت وما بيوزعش الأدوار بوضوح.",
+    "entryQuestionId": "QP1",
+    "priors": { "ROLES": 2, "COMM": 2 },
+    "icon": "users"
+  },
+  {
+    "id": "dont_know_start",
+    "domain": "project",
+    "label_ar": "مش عارف أبدأ المشروع منين",
+    "description_ar": "بتحس إنك ضايع ومش عارف خطوتك الأولى.",
+    "entryQuestionId": "QP1",
+    "priors": { "CLARITY": 2, "PROCRAST": 1 },
+    "icon": "compass"
+  }
+]

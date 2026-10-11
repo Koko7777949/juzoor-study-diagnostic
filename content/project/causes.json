@@ -1,0 +1,188 @@
+[
+  {
+    "id": "SPLIT",
+    "domain": "project",
+    "label_ar": "تقسيم العمل",
+    "branch": "التقسيم",
+    "description_ar": "المشروع مش متقسم لمهام صغيرة وواضحة، فكل واحد مش عارف يعمل إيه بالظبط.",
+    "whyChain": [
+      {
+        "prompt_ar": "إنت قسّمت المشروع لمهام صغيرة؟",
+        "options": [
+          { "label_ar": "لأ، كل واحد بيعمل اللي يقدر عليه", "evidence": { "SPLIT": 3 } },
+          { "label_ar": "أيوه بس مش واضحة", "evidence": { "SPLIT": 2, "CLARITY": 1 } },
+          { "label_ar": "أيوه وواضحة", "evidence": { "SPLIT": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه ما اتقسّمش بوضوح؟",
+        "options": [
+          { "label_ar": "ما حدش معاه خبرة في التقسيم", "evidence": { "SPLIT": 2, "ESTIM": 1 } },
+          { "label_ar": "مفيش وقت للتخطيط", "evidence": { "PROCRAST": 1, "SPLIT": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي هيساعدك تقسّم صح؟",
+        "options": [
+          { "label_ar": "مثال على مشروع زي ده", "evidence": { "CLARITY": 1, "SPLIT": 1 } },
+          { "label_ar": "أداة لتقسيم المهام", "evidence": { "SPLIT": 2 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ROLES",
+    "domain": "project",
+    "label_ar": "توزيع الأدوار",
+    "branch": "الأدوار",
+    "description_ar": "أدوار أعضاء الفريق مش واضحة، فبتحصل تضارب أو فجوات.",
+    "whyChain": [
+      {
+        "prompt_ar": "أدوار الفريق محددة؟",
+        "options": [
+          { "label_ar": "لأ", "evidence": { "ROLES": 3 } },
+          { "label_ar": "أيوه بس مش مكتوبة", "evidence": { "ROLES": 2, "COMM": 1 } },
+          { "label_ar": "أيوه ومكتوبة", "evidence": { "ROLES": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه مش محددة؟",
+        "options": [
+          { "label_ar": "كل واحد بيحب يعمل كل حاجة", "evidence": { "ROLES": 2 } },
+          { "label_ar": "مفيش قائد واضح", "evidence": { "ROLES": 2, "COMM": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي يضبط الأدوار؟",
+        "options": [
+          { "label_ar": "نقاش مكتوب في أول يوم", "evidence": { "ROLES": 2, "COMM": 1 } },
+          { "label_ar": "جدول مهام واضح", "evidence": { "ROLES": 2, "SPLIT": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "COMM",
+    "domain": "project",
+    "label_ar": "التواصل داخل الفريق",
+    "branch": "التواصل",
+    "description_ar": "التواصل بين الأعضاء مش منتظم، فبتضيع المعلومات.",
+    "whyChain": [
+      {
+        "prompt_ar": "إنتو بتتكلموا إزاي؟",
+        "options": [
+          { "label_ar": "بعض النهار وعشوائي", "evidence": { "COMM": 3 } },
+          { "label_ar": "اجتماع أسبوعي", "evidence": { "COMM": 1 } },
+          { "label_ar": "محادثات مكتوبة منتظمة", "evidence": { "COMM": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه ما بتتواصلوش بانتظام؟",
+        "options": [
+          { "label_ar": "كل واحد مشغول", "evidence": { "COMM": 1, "PROCRAST": 1 } },
+          { "label_ar": "ما فيش قناة واضحة", "evidence": { "COMM": 2 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي يحسّن التواصل؟",
+        "options": [
+          { "label_ar": "قناة واتس واحدة للمشروع", "evidence": { "COMM": 2 } },
+          { "label_ar": "اجتماع قصير ثابت", "evidence": { "COMM": 2, "ROLES": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ESTIM",
+    "domain": "project",
+    "label_ar": "تقدير الوقت",
+    "branch": "التقدير",
+    "description_ar": "الوقت اللي محتاجه كل مهمة مش مُقدّر بصراحة، فيتأخر المشروع.",
+    "whyChain": [
+      {
+        "prompt_ar": "بتقدّر وقت كل مهمة قبل ما تبدأ؟",
+        "options": [
+          { "label_ar": "لأ", "evidence": { "ESTIM": 3 } },
+          { "label_ar": "تقدير تقريبي", "evidence": { "ESTIM": 1 } },
+          { "label_ar": "بتقدّر بدقة", "evidence": { "ESTIM": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه التقدير صعب؟",
+        "options": [
+          { "label_ar": "ما عندناش خبرة", "evidence": { "ESTIM": 2, "CLARITY": 1 } },
+          { "label_ar": "بنأمل كتير", "evidence": { "ESTIM": 1, "PROCRAST": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي يساعدك تقدّر؟",
+        "options": [
+          { "label_ar": "تقسيم المهمة لخطوات أصغر", "evidence": { "ESTIM": 2, "SPLIT": 1 } },
+          { "label_ar": "تقديرات مشاريع سابقة", "evidence": { "ESTIM": 2 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "CLARITY",
+    "domain": "project",
+    "label_ar": "وضوح الهدف",
+    "branch": "الوضوح",
+    "description_ar": "الهدف من المشروع مش واضح، فبتبقى الخطوات ضبابية.",
+    "whyChain": [
+      {
+        "prompt_ar": "عارف الهدف النهائي للمشروع؟",
+        "options": [
+          { "label_ar": "لأ أو تقريباً", "evidence": { "CLARITY": 3 } },
+          { "label_ar": "عارف بشكل عام", "evidence": { "CLARITY": 1 } },
+          { "label_ar": "عارف بالظبط", "evidence": { "CLARITY": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه الهدف مش واضح؟",
+        "options": [
+          { "label_ar": "ما حدش شرحهولي", "evidence": { "CLARITY": 2, "COMM": 1 } },
+          { "label_ar": "بيتغير كل شوية", "evidence": { "CLARITY": 2, "ROLES": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي يوضّح الهدف؟",
+        "options": [
+          { "label_ar": "مكتوب في ورقة كبيرة", "evidence": { "CLARITY": 2 } },
+          { "label_ar": "سؤال للمسؤول", "evidence": { "CLARITY": 2, "COMM": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "PROCRAST",
+    "domain": "project",
+    "label_ar": "التأجيل",
+    "branch": "التأجيل",
+    "description_ar": "تأجيل بدء المهام لحد آخر ميعاد، فبيتراكم الشغل.",
+    "whyChain": [
+      {
+        "prompt_ar": "بتأجل المهام؟",
+        "options": [
+          { "label_ar": "كتير", "evidence": { "PROCRAST": 3 } },
+          { "label_ar": "أحياناً", "evidence": { "PROCRAST": 1 } },
+          { "label_ar": "نادراً", "evidence": { "PROCRAST": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه بتأجل؟",
+        "options": [
+          { "label_ar": "حاسس إن المهمة كبيرة", "evidence": { "PROCRAST": 2, "SPLIT": 1 } },
+          { "label_ar": "ما فيش دافع", "evidence": { "PROCRAST": 2, "CLARITY": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي يقلل التأجيل؟",
+        "options": [
+          { "label_ar": "تقسيم لمهام صغيرة", "evidence": { "PROCRAST": 2, "SPLIT": 1 } },
+          { "label_ar": "ميعاد نهائي واضح", "evidence": { "PROCRAST": 1, "ESTIM": 1 } }
+        ]
+      }
+    ]
+  }
+]

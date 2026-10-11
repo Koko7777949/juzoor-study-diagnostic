@@ -1,0 +1,221 @@
+[
+  {
+    "id": "UND",
+    "domain": "study",
+    "label_ar": "الفهم",
+    "branch": "الفهم",
+    "description_ar": "ضعف الفهم أو نقص في الأساسيات، المادة مش واضحة في أجزاء، واللي بعدها بيبقى أصعب.",
+    "whyChain": [
+      {
+        "prompt_ar": "في حاجة معينة في المادة مش فاهمها؟",
+        "options": [
+          { "label_ar": "أيوه، جزء محدد", "evidence": { "UND": 3 } },
+          { "label_ar": "لأ، بس حاسس إن ناقصني أساسيات", "evidence": { "UND": 2, "MOT": 1 } },
+          { "label_ar": "مش عارف بالظبط", "evidence": { "UND": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه ما رجعتش للأساسيات الأول؟",
+        "options": [
+          { "label_ar": "مكنش عارف إيه الأساسيات", "evidence": { "UND": 2, "TIME": 1 } },
+          { "label_ar": "حسيت إنها هتضيع وقت", "evidence": { "TIME": 2, "UND": 1 } },
+          { "label_ar": "حسيت إنها مش مهمة", "evidence": { "MOT": 2, "UND": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي هيخليك تفهم الجزء ده؟",
+        "options": [
+          { "label_ar": "لو حد شرحهولي ببساطة", "evidence": { "UND": 2, "MOT": 1 } },
+          { "label_ar": "لو رجعت للدرس اللي قبله", "evidence": { "UND": 3 } },
+          { "label_ar": "لو حليت عليه أمثلة", "evidence": { "UND": 2, "METH": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "TIME",
+    "domain": "study",
+    "label_ar": "تنظيم الوقت",
+    "branch": "الوقت",
+    "description_ar": "مفيش وقت أو خطة واضحة للمذاكرة، الوقت بيتضيع أو بيتزحم.",
+    "whyChain": [
+      {
+        "prompt_ar": "ليه وقت المذاكرة مش محدد؟",
+        "options": [
+          { "label_ar": "بمشي في حاجات تانية", "evidence": { "DIST": 2 } },
+          { "label_ar": "بحس مفيش وقت يكفي", "evidence": { "TIME": 2, "MOT": 2 } },
+          { "label_ar": "مش بعرف أقدر الوقت اللي كل مادة محتاجاه", "evidence": { "TIME": 1, "MOT": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه مفيش وقت محدد؟",
+        "options": [
+          { "label_ar": "بتستنى تحس إني خايب", "evidence": { "MOT": 2, "TIME": 1 } },
+          { "label_ar": "مفيش جدول أساسًا", "evidence": { "TIME": 2, "MOT": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه أكتر حاجة بتضيع وقتك؟",
+        "options": [
+          { "label_ar": "الموبايل", "evidence": { "DIST": 1, "MOT": 1 } },
+          { "label_ar": "التلفزيون أو الألعاب", "evidence": { "DIST": 2, "MOT": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "DIST",
+    "domain": "study",
+    "label_ar": "التشتت",
+    "branch": "التشتت",
+    "description_ar": "الانتباه بيتقطع أثناء المذاكرة (موبايل، ضوضاء، مواقع).",
+    "whyChain": [
+      {
+        "prompt_ar": "إيه أكتر حاجة بتشتتك؟",
+        "options": [
+          { "label_ar": "الموبايل والإشعارات", "evidence": { "DIST": 3 } },
+          { "label_ar": "ضوضاء في البيت", "evidence": { "DIST": 2, "SLEEP": 1 } },
+          { "label_ar": "أفكاري بتروح بعيد", "evidence": { "DIST": 1, "ANX": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه ما بتقدرش توقف المشتتات؟",
+        "options": [
+          { "label_ar": "حاسس إني محتاج الموبايل", "evidence": { "MOT": 2, "DIST": 1 } },
+          { "label_ar": "مبقدرش أسيب الأجهزة", "evidence": { "DIST": 2 } }
+        ]
+      },
+      {
+        "prompt_ar": "لو الشتتة وقفت، هتعمل إيه؟",
+        "options": [
+          { "label_ar": "هذاكر بانتباه", "evidence": { "DIST": 2, "METH": 1 } },
+          { "label_ar": "هفضل فاضي", "evidence": { "MOT": 2 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "METH",
+    "domain": "study",
+    "label_ar": "طريقة المذاكرة",
+    "branch": "الطريقة",
+    "description_ar": "المجهود موجود لكن الطريقة قراءة وحفظ فقط مش بتثبت المعلومة.",
+    "whyChain": [
+      {
+        "prompt_ar": "إنت بذاكر إزاي غالبًا؟",
+        "options": [
+          { "label_ar": "قراءة وتسميع", "evidence": { "METH": 3 } },
+          { "label_ar": "تلخيص", "evidence": { "METH": 1 } },
+          { "label_ar": "حل تمارين", "evidence": { "METH": -1, "UND": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه ما بتعملش استرجاع نشط؟",
+        "options": [
+          { "label_ar": "مش عارف إيه ده", "evidence": { "METH": 2, "TIME": 1 } },
+          { "label_ar": "باخد وقت كبير", "evidence": { "TIME": 2, "METH": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي هيساعدك تغير الطريقة؟",
+        "options": [
+          { "label_ar": "أمثلة جاهزة", "evidence": { "METH": 2 } },
+          { "label_ar": "حد يشرحلي", "evidence": { "UND": 1, "METH": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "SLEEP",
+    "domain": "study",
+    "label_ar": "قلة النوم",
+    "branch": "النوم",
+    "description_ar": "عدم انتظام النوم ممكن يقلل التركيز والصحة والروتين.",
+    "whyChain": [
+      {
+        "prompt_ar": "كام ساعة بينام عادة؟",
+        "options": [
+          { "label_ar": "أقل من 6", "evidence": { "SLEEP": 3 } },
+          { "label_ar": "من 6 لـ 8", "evidence": { "SLEEP": 1 } },
+          { "label_ar": "أكتر من 8", "evidence": { "SLEEP": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه نومك مش منتظم؟",
+        "options": [
+          { "label_ar": "موبايل قبل النوم", "evidence": { "DIST": 2, "SLEEP": 1 } },
+          { "label_ar": "ضغط مدرسي", "evidence": { "ANX": 2, "SLEEP": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي هيضبط نومك؟",
+        "options": [
+          { "label_ar": "ميعاد نوم ثابت", "evidence": { "SLEEP": 2 } },
+          { "label_ar": "أقل شتتة بالليل", "evidence": { "DIST": 1, "SLEEP": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ANX",
+    "domain": "study",
+    "label_ar": "توتر الامتحان",
+    "branch": "التوتر",
+    "description_ar": "التوتر وقت الامتحان بيبقى أصعب استرجاع اللي ذاكرته.",
+    "whyChain": [
+      {
+        "prompt_ar": "إحساسك وقت الامتحان إيه؟",
+        "options": [
+          { "label_ar": "قلبي بيدق وبنسى", "evidence": { "ANX": 3 } },
+          { "label_ar": "توتر بس بقدر أكمل", "evidence": { "ANX": 1 } },
+          { "label_ar": "هادي", "evidence": { "ANX": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "ليه بتتوتر؟",
+        "options": [
+          { "label_ar": "خايف أقصشل", "evidence": { "ANX": 2, "MOT": 1 } },
+          { "label_ar": "ما ذاكرتش كفاية", "evidence": { "TIME": 1, "ANX": 1 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي بيقلل التوتر؟",
+        "options": [
+          { "label_ar": "تنفس عميق", "evidence": { "ANX": 2 } },
+          { "label_ar": "امتحانات تجريبية", "evidence": { "ANX": 2, "METH": 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "MOT",
+    "domain": "study",
+    "label_ar": "الدافعية",
+    "branch": "الدافعية",
+    "description_ar": "الهدف مش واضح من المذاكرة فبتبقى الدافعية ضعيفة.",
+    "whyChain": [
+      {
+        "prompt_ar": "عارف ليه بتذاكر؟",
+        "options": [
+          { "label_ar": "مش واضح عندي", "evidence": { "MOT": 3 } },
+          { "label_ar": "علشان أنجح بس", "evidence": { "MOT": 1 } },
+          { "label_ar": "عندي هدف واضح", "evidence": { "MOT": -1 } }
+        ]
+      },
+      {
+        "prompt_ar": "لو ما نجحتش، إيه اللي هيحصل؟",
+        "options": [
+          { "label_ar": "خيبة أمل كبيرة", "evidence": { "MOT": 2, "ANX": 1 } },
+          { "label_ar": "مش حاسس بحاجة", "evidence": { "MOT": 2 } }
+        ]
+      },
+      {
+        "prompt_ar": "إيه اللي هيشغل دافعيتك؟",
+        "options": [
+          { "label_ar": "هدف صغير وواضح", "evidence": { "MOT": 2, "TIME": 1 } },
+          { "label_ar": "مكافأة قصيرة", "evidence": { "MOT": 2 } }
+        ]
+      }
+    ]
+  }
+]

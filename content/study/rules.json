@@ -1,0 +1,35 @@
+[
+  {
+    "id": "R_support",
+    "if": {
+      "any": [
+        { "answered": { "q": "Q2A", "option": "a" } },
+        { "answered": { "q": "Q2A", "option": "b" } }
+      ]
+    },
+    "then": [{ "showMessage": "support_note" }],
+    "explain_ar": "لأن الضغط عليك كبير، أظهرنا رسالة داعمة"
+  },
+  {
+    "id": "R_sleep_urgent",
+    "if": {
+      "all": [
+        { "profile": { "field": "urgent", "op": "==", "value": true } },
+        { "answered": { "q": "Q7", "option": "a" } }
+      ]
+    },
+    "then": [{ "addEvidence": { "cause": "SLEEP", "weight": 1 } }],
+    "explain_ar": "عندك امتحان قريب ونوم قليل، فرفعنا أهمية سبب النوم"
+  },
+  {
+    "id": "R_many_hours",
+    "if": {
+      "all": [
+        { "answered": { "q": "Q3", "option": "c" } },
+        { "answered": { "q": "Q4", "option": "a" } }
+      ]
+    },
+    "then": [{ "addEvidence": { "cause": "METH", "weight": 2 } }],
+    "explain_ar": "بتذاكر ساعات كتير بس بالقراءة والحفظ، فالطريقة غالباً أهم من عدد الساعات"
+  }
+]

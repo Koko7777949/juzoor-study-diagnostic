@@ -1,0 +1,94 @@
+[
+  {
+    "id": "QP1",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "إيه أكثر حاجة بتحس إنها مشكلتك في المشروع؟",
+    "priority": 10,
+    "options": [
+      { "id": "a", "label_ar": "مش عارف أبدأ منين", "evidence": { "CLARITY": 3, "PROCRAST": 1 } },
+      { "id": "b", "label_ar": "الشغل بيتأخر", "evidence": { "ESTIM": 2, "PROCRAST": 2 } },
+      { "id": "c", "label_ar": "الفريق مش متنظم", "evidence": { "ROLES": 2, "COMM": 2 } },
+      { "id": "d", "label_ar": "المهام مش واضحة", "evidence": { "SPLIT": 3, "CLARITY": 1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  },
+  {
+    "id": "QP2",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "هل المهام متقسمة بشكل واضح بين الأعضاء؟",
+    "priority": 20,
+    "options": [
+      { "id": "a", "label_ar": "لأ، كل واحد بيعمم اللي يقدر عليه", "evidence": { "SPLIT": 3, "ROLES": 1 } },
+      { "id": "b", "label_ar": "أيوه بس مش مكتوبة", "evidence": { "SPLIT": 1, "COMM": 1 } },
+      { "id": "c", "label_ar": "أيوه ومكتوبة لكل واحد", "evidence": { "SPLIT": -1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  },
+  {
+    "id": "QP3",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "أدوار أعضاء الفريق محددة؟",
+    "priority": 30,
+    "options": [
+      { "id": "a", "label_ar": "لأ", "evidence": { "ROLES": 3 } },
+      { "id": "b", "label_ar": "بشكل تقريبي", "evidence": { "ROLES": 1 } },
+      { "id": "c", "label_ar": "بشكل واضح ومتفق عليه", "evidence": { "ROLES": -1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  },
+  {
+    "id": "QP4",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "إزاي بتتواصلوا في الفريق؟",
+    "priority": 40,
+    "options": [
+      { "id": "a", "label_ar": "عشوائي", "evidence": { "COMM": 3 } },
+      { "id": "b", "label_ar": "اجتماع من فترة للتانية", "evidence": { "COMM": 1 } },
+      { "id": "c", "label_ar": "قناة مكتوبة منتظمة واجتماع أسبوعي", "evidence": { "COMM": -1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  },
+  {
+    "id": "QP5",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "بتقدّر وقت كل مهمة قبل ما تبدأها؟",
+    "priority": 50,
+    "options": [
+      { "id": "a", "label_ar": "لأ", "evidence": { "ESTIM": 3 } },
+      { "id": "b", "label_ar": "تقدير تقريبي", "evidence": { "ESTIM": 1 } },
+      { "id": "c", "label_ar": "تقدير دقيق ومكتوب", "evidence": { "ESTIM": -1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  },
+  {
+    "id": "QP6",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "الهدف النهائي للمشروع واضح عندك؟",
+    "priority": 60,
+    "options": [
+      { "id": "a", "label_ar": "لأ أو تقريباً", "evidence": { "CLARITY": 3 } },
+      { "id": "b", "label_ar": "بشكل عام", "evidence": { "CLARITY": 1 } },
+      { "id": "c", "label_ar": "بالظبط ومحدد", "evidence": { "CLARITY": -1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  },
+  {
+    "id": "QP7",
+    "domain": "project",
+    "kind": "loop",
+    "text_ar": "بتأجل المهام لحد آخر ميعاد؟",
+    "priority": 70,
+    "options": [
+      { "id": "a", "label_ar": "كتير", "evidence": { "PROCRAST": 3 } },
+      { "id": "b", "label_ar": "أحياناً", "evidence": { "PROCRAST": 1 } },
+      { "id": "c", "label_ar": "نادراً", "evidence": { "PROCRAST": -1 } },
+      { "id": "unk", "label_ar": "مش عارف", "evidence": {}, "isUnknown": true }
+    ]
+  }
+]

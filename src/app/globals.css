@@ -1,0 +1,330 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-cairo);
+  --font-cairo: var(--font-cairo);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Juzoor brand colors (from spec §13.2) */
+  --color-app-bg: var(--app-bg);
+  --color-app-text: var(--app-text);
+  --color-app-secondary: var(--app-secondary);
+  --color-app-primary: var(--app-primary);
+  --color-app-accent: var(--app-accent);
+  --color-app-success: var(--app-success);
+  --color-app-muted: var(--app-muted);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.42 0.08 195);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.005 220);
+  --secondary-foreground: oklch(0.25 0.05 270);
+  --muted: oklch(0.96 0.005 220);
+  --muted-foreground: oklch(0.45 0.01 220);
+  --accent: oklch(0.92 0.13 165);
+  --accent-foreground: oklch(0.18 0.05 195);
+  --destructive: oklch(0.55 0.22 27);
+  --border: oklch(0.90 0.01 220);
+  --input: oklch(0.92 0.005 220);
+  --ring: oklch(0.42 0.08 195);
+  --chart-1: oklch(0.55 0.10 195);
+  --chart-2: oklch(0.65 0.13 165);
+  --chart-3: oklch(0.45 0.06 270);
+  --chart-4: oklch(0.78 0.15 70);
+  --chart-5: oklch(0.55 0.20 16);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.15 0 0);
+  --sidebar-primary: oklch(0.42 0.08 195);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0 0);
+  --sidebar-accent-foreground: oklch(0.15 0 0);
+  --sidebar-border: oklch(0.90 0.01 220);
+  --sidebar-ring: oklch(0.42 0.08 195);
+
+  /* Juzoor brand palette (spec §13.2) — mapped to oklch equivalents */
+  --app-bg: oklch(0.985 0.005 220);
+  --app-text: oklch(0.40 0.10 230);
+  --app-secondary: oklch(0.45 0.10 285);
+  --app-primary: oklch(0.46 0.09 195);     /* #0F6766 */
+  --app-accent: oklch(0.85 0.14 165);      /* #5FE9B0 */
+  --app-success: oklch(0.60 0.13 145);     /* success green */
+  --app-muted: oklch(0.94 0.005 220);
+
+  /* Confidence traffic-light colors */
+  --confidence-high: oklch(0.62 0.16 145);    /* green */
+  --confidence-medium: oklch(0.68 0.12 60);   /* warm amber */
+  --confidence-low: oklch(0.70 0.005 220);    /* gray */
+}
+
+.dark {
+  --background: oklch(0.16 0.01 220);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.22 0.01 220);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.22 0.01 220);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.70 0.10 180);
+  --primary-foreground: oklch(0.15 0 0);
+  --secondary: oklch(0.28 0.01 220);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.28 0.01 220);
+  --muted-foreground: oklch(0.72 0.01 220);
+  --accent: oklch(0.35 0.10 165);
+  --accent-foreground: oklch(0.95 0.02 165);
+  --destructive: oklch(0.65 0.22 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.70 0.10 180);
+
+  --app-bg: oklch(0.16 0.01 220);
+  --app-text: oklch(0.90 0.04 230);
+  --app-secondary: oklch(0.78 0.10 285);
+  --app-primary: oklch(0.70 0.10 180);
+  --app-accent: oklch(0.55 0.12 165);
+  --app-success: oklch(0.65 0.13 145);
+  --app-muted: oklch(0.28 0.01 220);
+
+  --confidence-high: oklch(0.65 0.16 145);
+  --confidence-medium: oklch(0.70 0.12 60);
+  --confidence-low: oklch(0.55 0.01 220);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "kern";
+  }
+  /* Ensure proper RTL number rendering */
+  body {
+    font-variant-numeric: lining-nums;
+  }
+}
+
+@layer utilities {
+  .font-cairo {
+    font-family: var(--font-cairo), "Tajawal", system-ui, sans-serif;
+  }
+  .bg-app-bg {
+    background-color: var(--app-bg);
+  }
+  .text-app-text {
+    color: var(--app-text);
+  }
+  .bg-app-primary {
+    background-color: var(--app-primary);
+  }
+  .text-app-primary {
+    color: var(--app-primary);
+  }
+  .bg-app-accent {
+    background-color: var(--app-accent);
+  }
+  .text-app-accent {
+    color: var(--app-accent);
+  }
+  .bg-app-muted {
+    background-color: var(--app-muted);
+  }
+  .text-app-secondary {
+    color: var(--app-secondary);
+  }
+  .bg-app-success {
+    background-color: var(--app-success);
+  }
+  .text-app-success {
+    color: var(--app-success);
+  }
+  .border-app-primary {
+    border-color: var(--app-primary);
+  }
+  .border-app-accent {
+    border-color: var(--app-accent);
+  }
+
+  .confidence-high {
+    background-color: var(--confidence-high);
+    color: white;
+  }
+  .confidence-medium {
+    background-color: var(--confidence-medium);
+    color: white;
+  }
+  .confidence-low {
+    background-color: var(--confidence-low);
+    color: white;
+  }
+
+  /* Custom scrollbar for long lists */
+  .scroll-area-juzoor {
+    max-height: 24rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--app-primary) transparent;
+  }
+  .scroll-area-juzoor::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scroll-area-juzoor::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--app-primary) 50%, transparent);
+    border-radius: 3px;
+  }
+  .scroll-area-juzoor::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Safe-area for iOS bottom footer */
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  /* Min touch target size 44px */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Print styles for plan export */
+  @media print {
+    @page {
+      margin: 1.5cm 1cm;
+    }
+    html,
+    body {
+      background: white !important;
+      color: black !important;
+      font-size: 12pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    /* Hide all .no-print and any print:hidden Tailwind elements */
+    .no-print,
+    [class*="print:hidden"] {
+      display: none !important;
+    }
+    /* Force the print:block visibility for plan content */
+    .print\:block {
+      display: block !important;
+    }
+    /* Reset safe-area padding for printed pages */
+    .pt-safe,
+    .pb-safe {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    .bg-app-bg,
+    .bg-app-muted,
+    .bg-card {
+      background: white !important;
+    }
+    .text-app-text,
+    .text-app-secondary,
+    .text-app-primary {
+      color: black !important;
+    }
+    .border,
+    .border-border {
+      border-color: #ddd !important;
+    }
+    [class*="bg-app-primary"] {
+      background-color: #f0f0f0 !important;
+      color: black !important;
+    }
+    /* Larger font sizes for printed plan content */
+    h1 {
+      font-size: 18pt !important;
+    }
+    h2 {
+      font-size: 14pt !important;
+    }
+    p,
+    li {
+      font-size: 11pt !important;
+      line-height: 1.5 !important;
+    }
+    /* Avoid breaking inside day rows / metric cards */
+    .print\:break-inside-avoid {
+      break-inside: avoid;
+    }
+    /* Hide color swatches / icons that don't print well */
+    .text-app-success {
+      color: black !important;
+    }
+    .bg-app-success {
+      background-color: #f0f0f0 !important;
+      color: black !important;
+    }
+    .bg-app-primary\/5,
+    .bg-app-primary\/10,
+    .bg-app-primary\/15,
+    .bg-app-primary\/20,
+    .bg-app-success\/10,
+    .bg-app-success\/30 {
+      background-color: white !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

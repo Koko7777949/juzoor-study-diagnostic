@@ -1,0 +1,46 @@
+[
+  {
+    "id": "grades_dropped",
+    "domain": "study",
+    "label_ar": "درجاتي قلت",
+    "description_ar": "درجاتك في الامتحانات أو الاختبارات بدأت تقل عن اللي كنت بتجيبه قبل كده.",
+    "entryQuestionId": "Q1",
+    "icon": "trending_down"
+  },
+  {
+    "id": "homework_undone",
+    "domain": "study",
+    "label_ar": "مش بخلص واجباتي",
+    "description_ar": "بتأجل الواجبات أو ما تخلصهاش في وقتها.",
+    "entryQuestionId": "Q1",
+    "priors": { "TIME": 2, "DIST": 2, "MOT": 2 },
+    "icon": "clipboard_x"
+  },
+  {
+    "id": "dont_understand",
+    "domain": "study",
+    "label_ar": "مش فاهم مادة",
+    "description_ar": "حاسس إنك مش فاهم محتوى مادة معينة أو جزء منها.",
+    "entryQuestionId": "Q1",
+    "priors": { "UND": 3 },
+    "icon": "question"
+  },
+  {
+    "id": "forget_in_exam",
+    "domain": "study",
+    "label_ar": "بنسى وقت الامتحان",
+    "description_ar": "بتكون ذاكرت بس وقت الامتحان بنسى اللي كنت عارفه.",
+    "entryQuestionId": "Q1",
+    "priors": { "ANX": 2, "METH": 2 },
+    "icon": "brain"
+  },
+  {
+    "id": "cant_start",
+    "domain": "study",
+    "label_ar": "مش عارف أبدأ منين",
+    "description_ar": "بتحس إنك ضايع ومش عارف تبدأ المذاكرة من فين.",
+    "entryQuestionId": "Q1",
+    "priors": { "TIME": 1, "DIST": 1, "MOT": 1 },
+    "icon": "compass"
+  }
+]

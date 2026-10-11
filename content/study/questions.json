@@ -1,0 +1,333 @@
+[
+  {
+    "id": "Q1",
+    "domain": "study",
+    "kind": "entry",
+    "text_ar": "درجاتي بدأت تقل إمتى؟",
+    "priority": 1,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "فجأة بعد حاجة",
+        "evidence": { "SLEEP": 1, "ANX": 1 },
+        "next": "Q2A"
+      },
+      {
+        "id": "b",
+        "label_ar": "تدريجي على شهور",
+        "evidence": { "TIME": 1, "DIST": 1 },
+        "next": "Q2B"
+      },
+      {
+        "id": "c",
+        "label_ar": "فترة طويلة وباقية",
+        "evidence": { "UND": 2, "METH": 1 },
+        "next": "Q2C"
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true,
+        "next": "Q2B"
+      }
+    ]
+  },
+  {
+    "id": "Q2A",
+    "domain": "study",
+    "kind": "entry",
+    "text_ar": "إيه اللي اتغير قبل ما درجاتي تقل؟",
+    "priority": 1,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "مدرس جديد أو منهج أصعب",
+        "evidence": { "UND": 2, "ANX": 2, "MOT": 1 },
+        "flags": ["support_note"]
+      },
+      {
+        "id": "b",
+        "label_ar": "حاجة شخصية أو أسرية",
+        "evidence": { "SLEEP": 1, "ANX": 2, "MOT": 1 },
+        "flags": ["support_note"]
+      },
+      {
+        "id": "c",
+        "label_ar": "الجدول أو النوم اتغير",
+        "evidence": { "SLEEP": 1, "TIME": 3 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q2B",
+    "domain": "study",
+    "kind": "entry",
+    "text_ar": "المشكلة في مادة أو مادتين ولا في أغلب المواد؟",
+    "priority": 1,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "في مادة أو مادتين",
+        "evidence": { "UND": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "أغلب المواد",
+        "evidence": { "TIME": 2, "DIST": 2, "SLEEP": 1, "MOT": 1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q2C",
+    "domain": "study",
+    "kind": "entry",
+    "text_ar": "بتحس إنك فاهم بس ناقصك أساسيات المواد اللي ضعيف فيها؟",
+    "priority": 1,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "لأ، ناقصني أساسيات المواد",
+        "evidence": { "UND": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "فاهم بس بنسى بسرعة",
+        "evidence": { "METH": 3 }
+      },
+      {
+        "id": "c",
+        "label_ar": "مهماف أوي وبنسى بسرعة",
+        "evidence": { "TIME": 1, "DIST": 1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q3",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "بتذاكر كام ساعة في اليوم تقريباً؟",
+    "priority": 30,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "أقل من ساعة",
+        "evidence": { "TIME": 2, "MOT": 2 }
+      },
+      {
+        "id": "b",
+        "label_ar": "من ساعة لـ 3 ساعات",
+        "evidence": {}
+      },
+      {
+        "id": "c",
+        "label_ar": "أكتر من 3 ساعات",
+        "evidence": { "METH": 2, "SLEEP": 1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q4",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "غالباً بذاكر إزاي؟",
+    "priority": 40,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "قراءة وتسميع أو حفظ",
+        "evidence": { "METH": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "تلخيص",
+        "evidence": { "METH": 1 }
+      },
+      {
+        "id": "c",
+        "label_ar": "حل تمارين وأسئلة",
+        "evidence": { "UND": 1, "METH": -1 }
+      },
+      {
+        "id": "d",
+        "label_ar": "مش بذاكر بشكل منتظم",
+        "evidence": { "TIME": 2, "MOT": 2 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q5",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "وإنت بذاكر، كام مرة تقريباً بتمسك الموبايل؟",
+    "priority": 50,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "كل شوية",
+        "evidence": { "DIST": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "مرة أو مرتين",
+        "evidence": { "DIST": 1 }
+      },
+      {
+        "id": "c",
+        "label_ar": "ولمرة",
+        "evidence": { "DIST": -1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q6",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "عندك جدول أو خطة مكتوبة للمذاكرة؟",
+    "priority": 60,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "لأ",
+        "evidence": { "TIME": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "أيوه بس مش بلتزم",
+        "evidence": { "TIME": 2, "MOT": 2 }
+      },
+      {
+        "id": "c",
+        "label_ar": "أيوه وبلتزم",
+        "evidence": { "TIME": -1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q7",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "بتنام كام ساعة في الأيام العادية؟",
+    "priority": 70,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "أقل من 6 ساعات",
+        "evidence": { "SLEEP": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "من 6 لـ 8 ساعات",
+        "evidence": { "SLEEP": -1 }
+      },
+      {
+        "id": "c",
+        "label_ar": "أكتر من 8 ساعات",
+        "evidence": {}
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q8",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "وقت الامتحان بتنسى حاجات كنت حافظها بسبب التوتر؟",
+    "priority": 80,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "كتير",
+        "evidence": { "ANX": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "أحياناً",
+        "evidence": { "ANX": 1 }
+      },
+      {
+        "id": "c",
+        "label_ar": "لأ",
+        "evidence": { "ANX": -1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  },
+  {
+    "id": "Q9",
+    "domain": "study",
+    "kind": "loop",
+    "text_ar": "عارف ليه بتذاكر وعايز توصل لأي درجة؟",
+    "priority": 90,
+    "options": [
+      {
+        "id": "a",
+        "label_ar": "مش واضح عندي وعايز أوصل لأي درجة",
+        "evidence": { "MOT": 3 }
+      },
+      {
+        "id": "b",
+        "label_ar": "واضح",
+        "evidence": { "MOT": -1 }
+      },
+      {
+        "id": "unk",
+        "label_ar": "مش عارف",
+        "evidence": {},
+        "isUnknown": true
+      }
+    ]
+  }
+]
