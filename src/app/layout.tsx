@@ -14,8 +14,15 @@ export const metadata: Metadata = {
   title: "جذور | حلل مشكلتك الدراسية خطوة بخطوة",
   description:
     "تطبيق جذور يرشدك من المشكلة الظاهرة إلى أقرب سبب، ثم يقارن الحلول ويرسم لك خطة صغيرة قابلة للتنفيذ خلال 7 أيام.",
-  keywords: ["جذور", "دراسة", "تنظيم وقت", "تشخيص دراسي", "طلاب"],
-  authors: [{ name: "Z.ai" }],
+  keywords: ["جذور", "دراسة", "تنظيم وقت", "تشخيص دراسي", "طلاب", "مذاكرة", "امتحانات"],
+  authors: [{ name: "Koko7777949" }],
+  repository: "https://github.com/Koko7777949/juzoor-study-diagnostic",
+  openGraph: {
+    title: "جذور | حلل مشكلتك الدراسية خطوة بخطوة",
+    description: "تطبيق جذور يرشدك من المشكلة الظاهرة إلى أقرب سبب، ثم يقارن الحلول ويرسم لك خطة صغيرة قابلة للتنفيذ خلال 7 أيام.",
+    type: "website",
+    locale: "ar_EG",
+  },
 };
 
 export const viewport: Viewport = {
