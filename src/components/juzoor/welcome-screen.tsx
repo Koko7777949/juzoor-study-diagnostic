@@ -54,7 +54,7 @@ export function WelcomeScreen() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col items-center text-center pt-4"
+        className="flex flex-col items-center text-center pt-4 bg-app-gradient-hero rounded-3xl pb-6"
       >
         <motion.div
           initial={{ scale: 0.8, rotate: -8 }}
@@ -85,7 +85,7 @@ export function WelcomeScreen() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.18 }}
-        className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-sm"
+        className="bg-card-gradient border border-border rounded-2xl p-4 flex flex-col gap-3 shadow-card-soft"
         aria-label="إزاي بيشتغل التطبيق"
       >
         <h2 className="text-sm font-bold text-app-text flex items-center gap-1.5">

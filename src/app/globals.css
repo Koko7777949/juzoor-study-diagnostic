@@ -192,6 +192,55 @@
     border-color: var(--app-accent);
   }
 
+  /* Gradient backgrounds for visual depth */
+  .bg-app-gradient {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--app-accent) 8%, var(--app-bg)) 0%,
+      var(--app-bg) 30%
+    );
+  }
+  .bg-app-gradient-hero {
+    background: radial-gradient(
+      ellipse at top,
+      color-mix(in oklch, var(--app-accent) 15%, transparent) 0%,
+      transparent 60%
+    );
+  }
+  .bg-card-gradient {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--app-primary) 5%, var(--card)) 0%,
+      var(--card) 50%
+    );
+  }
+  .bg-card-gradient-accent {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--app-accent) 10%, var(--card)) 0%,
+      var(--card) 50%
+    );
+  }
+  .bg-card-gradient-success {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--app-success) 8%, var(--card)) 0%,
+      var(--card) 50%
+    );
+  }
+
+  /* Card shadow depth */
+  .shadow-card-soft {
+    box-shadow:
+      0 1px 2px 0 color-mix(in oklch, var(--app-primary) 8%, transparent),
+      0 1px 3px 0 color-mix(in oklch, var(--app-primary) 6%, transparent);
+  }
+  .shadow-card-hover {
+    box-shadow:
+      0 4px 6px -1px color-mix(in oklch, var(--app-primary) 10%, transparent),
+      0 2px 4px -2px color-mix(in oklch, var(--app-primary) 8%, transparent);
+  }
+
   .confidence-high {
     background-color: var(--confidence-high);
     color: white;

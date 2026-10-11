@@ -936,3 +936,85 @@ Task: QA verification + date-based check-in fix (planId scoping) + side-by-side 
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
 5. **Follow-up screen enhancement**: Add a before/after comparison showing how the user's scores changed between the initial diagnosis and the follow-up (if they re-take the questions).
 6. **Daily streak notifications**: Add a browser notification API (with permission) for daily check-in reminders.
+
+---
+Task ID: 17
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + follow-up screen diagnosis recap + gradient backgrounds and card depth
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200 (one transient 500 during hot reload, resolved).
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states, review answers, trajectory recap, how-it-works onboarding, daily check-in streak, journey summary, side-by-side comparison dialog, date-based check-in scoping) still work.
+- Note: The worklog entry from the comparison-dialog agent (Task 16, line 853) mentioned different scores (TIME=92, DIST=75, MOT=62) — this was because that agent used a different symptom (homework_undone with priors) and profile (urgent=true), not a regression. Verified the standard worked example (grades_dropped, 30min, not urgent) still produces TIME=90, DIST=67, MOT=55.
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses (one transient 500 during hot reload — resolved)
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested follow-up screen diagnosis recap: shows symptom, top 3 causes with mini score bars, selected solutions, plan ID + review date + answer count ✓
+5. Tested gradient backgrounds: welcome hero has radial gradient, how-it-works card has gradient + soft shadow, app shell has subtle vertical gradient ✓
+
+### New features / polish added
+
+**1. Follow-up screen diagnosis recap** (`src/components/juzoor/followup-screen.tsx`)
+- Full rewrite with diagnosis recap card at the top of the follow-up screen:
+  - Card with gradient header ("ملخص تشخيصك") and `ClipboardList` icon
+  - Shows the original symptom label
+  - Top 3 causes with numbered circles, labels, animated mini score bars (gradient fill), and percentage
+  - Selected solutions as pills/tags
+  - Plan ID + review date + answer count footer
+  - Animated entrance (fade + slide)
+- After submission, the thank-you card now shows a summary of the user's follow-up responses (executed, improved, metric value)
+- The thank-you card uses a gradient background (from-app-accent/20 to-app-primary/10)
+- Radio buttons get shadow-sm when selected for visual depth
+
+**2. Gradient backgrounds and card depth** (`src/app/globals.css` + multiple screens)
+- New CSS utility classes in globals.css:
+  - `bg-app-gradient` — subtle vertical gradient from accent-tinted to plain bg (used on main app shell)
+  - `bg-app-gradient-hero` — radial gradient at top for hero sections (used on welcome hero)
+  - `bg-card-gradient` — diagonal gradient with primary tint (used on cards)
+  - `bg-card-gradient-accent` — diagonal gradient with accent tint
+  - `bg-card-gradient-success` — diagonal gradient with success tint
+  - `shadow-card-soft` — soft primary-tinted shadow for cards
+  - `shadow-card-hover` — stronger shadow for hover/selected states
+- Applied to:
+  - App shell main container: `bg-app-gradient` (subtle vertical gradient)
+  - Welcome hero section: `bg-app-gradient-hero` (radial accent glow at top)
+  - Welcome "how it works" card: `bg-card-gradient shadow-card-soft`
+  - Follow-up thank-you card: `bg-gradient-to-br from-app-accent/20 to-app-primary/10`
+  - Follow-up diagnosis recap header: `bg-gradient-to-l from-app-primary/10 to-transparent`
+
+### Files modified
+- `src/components/juzoor/followup-screen.tsx` — full rewrite with diagnosis recap card + enhanced thank-you summary
+- `src/app/globals.css` — new gradient utility classes + shadow utilities
+- `src/components/juzoor/app-shell.tsx` — main container uses `bg-app-gradient`
+- `src/components/juzoor/welcome-screen.tsx` — hero section uses `bg-app-gradient-hero`, how-it-works card uses `bg-card-gradient shadow-card-soft`
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200 ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Follow-up diagnosis recap: shows symptom, top 3 causes with scores, selected solutions, plan info ✓
+- Gradient backgrounds: welcome hero, how-it-works card, app shell, follow-up cards all have visual depth ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values. Final scores match. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works, no automatic upload.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+- **Old check-ins from previous sessions** (carried over): Orphaned in localStorage. wipeData clears everything.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, solutions.
+3. **Accessibility audit**: Full WCAG AA audit; verify screen reader navigation.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
+5. **Apply gradient card styles to remaining screens**: causes cards, solution cards, plan timeline cards could all benefit from the new `bg-card-gradient` and `shadow-card-soft` utilities.
+6. **Daily streak notifications**: Add browser notification API for daily check-in reminders.

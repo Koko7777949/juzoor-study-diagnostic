@@ -108,7 +108,7 @@ export function AppShell() {
       };
 
   return (
-    <main className="min-h-screen flex flex-col bg-app-bg">
+    <main className="min-h-screen flex flex-col bg-app-gradient">
       {/* Skip-to-content link for keyboard / screen-reader users */}
       <a
         href="#main-content"
