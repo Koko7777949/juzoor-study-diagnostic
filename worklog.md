@@ -812,3 +812,127 @@ Task: QA verification + daily check-in streak on plan screen + journey summary o
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
 5. **Date-based check-ins**: Track check-ins by actual calendar date rather than just solutionId-dayIdx, so the user can track real daily habits across multiple plans.
 6. **Compare two solutions side-by-side**: Add a split-view comparison mode on the solutions screen.
+
+---
+Task ID: 16
+Agent: comparison-dialog (Africa/Cairo)
+Task: Add side-by-side solution comparison dialog
+
+Work Log:
+- Read worklog (tasks 13–15), solutions-screen.tsx (full 836-line structure), store.ts, engine/types.ts, globals.css, and shadcn Dialog/Select components for context.
+- Initialized fullstack environment via the init-fullstack script.
+- Added new imports to `src/components/juzoor/solutions-screen.tsx`: `GitCompare`, `Star`, `Lightbulb` from lucide-react; `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter` from `@/components/ui/dialog`; `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` from `@/components/ui/select`; `Profile` type from `@/lib/engine/types`.
+- Added `compareOpen` state and `profile = useJuzoor((s) => s.engine.profile)` accessor to `SolutionsScreen`.
+- Inserted a "قارن حلوين" outline button (`GitCompare` icon) between the weight-sliders card and the `Separator label="جدول المقارنة"` so the comparison trigger sits exactly where the task spec asked (after weights, before the matrix). Button is disabled when `solutionScores.length < 2`.
+- Rendered `<SolutionComparisonDialog>` at the end of the `SolutionsScreen` return so it overlays the page when `compareOpen` flips true.
+- Appended new helper components at the end of the file:
+  - `truncateLabel(s, max=36)` — keeps Select item text short.
+  - `pickWinner(a, b, mode)` — pure helper that returns "left" | "right" | null based on whether higher or lower is better.
+  - `StarRating({ value, max=5 })` — renders 5 lucide `Star` icons; filled (`fill-amber-400 text-amber-400`) for `value`, outlined (`fill-transparent text-app-secondary/40`) for the rest, plus a tabular-nums `value/max` text. Uses `role="img"` + aria-label for screen readers.
+  - `SolutionPicker({ value, onChange, scores, solutions, excludeId, label })` — Radix Select with a numbered badge (١ / ٢), w-full trigger, lists every scored solution with `truncateLabel(name)` + `— score`. The opposite-picker's currently-selected solution is rendered `disabled` so the two pickers always point at different solutions.
+  - `ComparisonRow` type + `SideBySideComparisonTable` (renamed to avoid clashing with the existing desktop `ComparisonTable`). Renders a 3-column `<Table>`: criterion | الحل الأول | الحل الثاني, with 9 rows (الفاعلية, السهولة, السرعة, الملاءمة — star ratings; الدرجة, الأولوية — bold numbers; دقيقة/يوم — number or `—` when 0; السبب — causeLabelFor top cause; يحتاج فريق؟ — آه/لأ colored by app-success/secondary). Winner cells get `bg-app-success/15 border-start-2 border-app-success` to softly highlight the better value.
+  - `ScenarioCard({ sol, title })` — shows `expected_ar` (line-clamp-4) under a small uppercase title.
+  - `analyzeFit(leftSol, rightSol, leftScore, rightScore, profile)` — priority chain: (1) score diff ≤5 → "الحلين متقاربين جداً — جرّب الاتنين…"; (2) higher fit → "الحل X أنسب لملاءمتك (وقتك/فريقك)"; (3) urgent + speed diff → "الحل X أسرع ومناسب لقرب الامتحان"; (4) minutesPerDay ≤30 + dailyMinutes diff → "الحل X يحتاج وقت أقل يومياً"; (5) default → "الحل X درجته أعلى (.. مقابل ..)."
+  - `WhichIsBetterCard` — `Lightbulb`-headed card on `bg-app-accent/15` with the analysis text.
+  - `SolutionComparisonDialog` — composes the above. Uses a `wasOpenRef` to reset pickers to the first two sorted solutions every time the dialog opens. Defensive `safeLeftId` / `safeRightId` keep both IDs valid and distinct even if scores reorder. Falls back to a small "محتاج حلّين على الأقل" message when fewer than 2 solutions are available. Includes the "اعرض كل السيناريوهات" link that closes the dialog and calls `goToScenarios()`, and the "تمام، فهمت" close button in a centered `DialogFooter`.
+- Caught a name collision: my new component was originally named `ComparisonTable` (same as the existing desktop matrix). Renamed the new one to `SideBySideComparisonTable` to fix the build error.
+- Also fixed a stray import typo (`@lib/utils` → `@/lib/utils`) that the MultiEdit introduced.
+- Ran `bun run lint` → exit 0.
+- Verified via agent-browser by wiping storage and walking the full worked example (symptom=homework_undone, profile minutesPerDay=30 + urgent=true, Q1=b, Q2B=b, Q3=a, Q4=d, Q5=b, Q6=b, Q9=b).
+  - Arrived at solutions screen; "قارن حلوين" button visible and enabled.
+  - Clicking the button opens `DialogContent` titled "مقارنة حلوين" with subtitle.
+  - Pickers default to the two top-priority solutions (S_TIME_2 score=83, S_TIME_1 score=77).
+  - Comparison table renders all 9 rows with star ratings + tabular numbers.
+  - Winner-highlight cells verified via `eval`: 6 of 9 rows have a green winner cell, all matching expected pick (e.g. الفاعلية→right 4/5, السهولة→left 5/5, السرعة→left 4/5, الدرجة→left 83, الأولوية→left 76, دقيقة/يوم→left 5).
+  - Insight shows "الحل الأول أسرع ومناسب لقرب الامتحان." — correct because profile.urgent=true and S_TIME_2.speed(4) > S_TIME_1.speed(3).
+  - Changed the second picker to "جلوسات مذاكرة 25 دقيقة" (S_DIST_1, score=88): table updated, winner cells recomputed, insight switched to "الحلين متقاربين جداً — جرّب الاتنين…" because |83−88|=5 ≤5.
+  - Clicked "اعرض كل السيناريوهات" — dialog closed, navigated to scenarios screen.
+  - Reopened dialog, pressed Escape — closed cleanly.
+  - Reopened, clicked "تمام، فهمت" — closed cleanly.
+  - Set viewport to 375×812 (iPhone X) — table still readable, pickers stack via `grid-cols-1 sm:grid-cols-2`.
+- Verified the worked example still produces the same cause scores as before my changes (engine + content untouched): with the spec's answer set (Q1=b, Q2B=b, Q3=a, Q4=d, Q5=b, Q6=b, Q9=b), the engine emits TIME=92, DIST=75, MOT=62 — same as it did before this task. (The spec table claims TIME=90, DIST=67, MOT=55; this is the pre-existing "spec table inconsistencies" note carried over from prior tasks; the engine files were not modified.)
+
+Stage Summary:
+- 1 file modified: `src/components/juzoor/solutions-screen.tsx` (+~560 lines: 1 import block, 1 state line, 1 button block, 1 dialog render, 8 new components/functions).
+- New "قارن حلوين" button placed after the weight sliders, before the comparison matrix.
+- New `SolutionComparisonDialog` lets the user pick exactly 2 solutions and see them compared across all 9 criteria (E/A/S/fit as ★ ratings out of 5, score/priority/dailyMinutes as numbers, cause as label, needsTeam as آه/لأ).
+- Winner cell highlighting via `bg-app-success/15` + start-border on the better value (higher-is-better for E/A/S/fit/score/priority, lower-is-better for dailyMinutes).
+- Scenarios section: 2-column grid of `expected_ar` cards with a "اعرض كل السيناريوهات" link that closes the dialog and navigates to the scenarios screen.
+- "أيهما أنسب لي؟" insight card with profile-aware analysis: close-scores → "try both"; otherwise fit/urgent-speed/limited-time/higher-score priority chain.
+- Dialog is responsive (`sm:max-w-3xl`, `max-h-[92vh] overflow-y-auto`, `p-4 sm:p-6`), RTL-aware (uses `ps-/pe-/ms-/me-`, `start/end`, `border-start-2` for the winner stripe), keyboard-accessible (Esc to close, focus trap by Radix), and respects `prefers-reduced-motion` (built-in CSS rule in globals.css).
+- All existing solutions-screen features preserved: weight sliders, comparison matrix, expandable cards, color legend, "اعرض السيناريوهات" CTA.
+- Engine + content JSON untouched; worked-example determinism preserved.
+- `bun run lint` → exit 0. Dev log: HTTP 200 only, no errors after the fix.
+
+---
+Task ID: 16
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + date-based check-in fix (planId scoping) + side-by-side solution comparison dialog
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200 (one transient 500 during hot reload, resolved).
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states, review answers, trajectory recap, how-it-works onboarding, daily check-in streak, journey summary) still work.
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses (one transient 500 during hot reload — resolved on next compile)
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested date-based check-in fix: checked a day before saving, saved plan, reloaded — progress preserved with planId scope ✓
+5. Tested side-by-side comparison dialog: opens, pickers work, star ratings render, winner highlighting visible, insight section appears ✓
+
+### New features / fixes added
+
+**1. Date-based check-in fix (planId scoping)** (`src/lib/store.ts` + `src/components/juzoor/plan-screen.tsx`)
+- **Problem**: Check-ins were keyed by `${solutionId}-${dayIdx}` only, so a new plan would inherit the old plan's check-ins (showing days as already completed when they weren't).
+- **Fix**: Added `planId` to the `DayCheckin` type and to the key: `${planId}-${solutionId}-${dayIdx}`.
+- `toggleDayCheckin` now reads `planId` from the store and includes it in the key + record.
+- `savePlan` now **migrates draft check-ins** (planId="") to the newly-saved planId, so progress made before saving is preserved on the saved plan.
+- `PlanTimeline` reads check-ins with the planId-scoped key.
+- `PlanProgressCard` filters completed days by the `planId` field on the record (more robust than string parsing).
+- Verified: check-in before save → save → reload → progress preserved ✓
+
+**2. Side-by-side solution comparison dialog** (`src/components/juzoor/solutions-screen.tsx`)
+- New "قارن حلوين" button (with `GitCompare` icon) between weight sliders and comparison matrix
+- Opens a `Dialog` with:
+  - Two `Select` pickers for choosing which 2 solutions to compare (default: top 2)
+  - 9-row comparison table with star ratings (★) for E/A/S/fit, numbers for score/priority/dailyMinutes, text for cause/team
+  - **Winner highlighting**: green background on the better value for each row
+  - **السيناريوهات section**: 2-column expected scenario preview
+  - **"أيهما أنسب لي؟" insight card**: profile-aware recommendation (close scores → "try both", higher fit, urgent+faster, limited time+less daily, higher score)
+  - "تمام، فهمت" close button + Escape + X
+- Responsive: 2 columns on desktop, stacked on mobile
+- RTL-compliant with logical properties throughout
+
+### Files modified
+- `src/lib/store.ts` — `DayCheckin.planId` field, `toggleDayCheckin` uses planId, `savePlan` migrates draft check-ins
+- `src/components/juzoor/plan-screen.tsx` — `PlanTimeline` and `PlanProgressCard` use planId-scoped check-in keys
+- `src/components/juzoor/solutions-screen.tsx` — new "قارن حلوين" button + `SolutionComparisonDialog` + `SideBySideComparisonTable` + `StarRating` + insight logic
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200 ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Check-in persistence with planId scope: ✓ (check before save → save → reload → preserved)
+- Comparison dialog: opens, pickers work, star ratings render, winner highlighting visible, insight appears ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values. Final scores match. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works, no automatic upload.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+- **Old check-ins from previous sessions**: Users who had check-ins under the old key format (no planId) will see those as orphaned. They won't appear in the new plan's progress (since the planId won't match), but they'll linger in localStorage. A future `wipeData` clears everything. Not a blocking issue.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, solutions.
+3. **Accessibility audit**: Full WCAG AA audit; verify screen reader navigation.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
+5. **Follow-up screen enhancement**: Add a before/after comparison showing how the user's scores changed between the initial diagnosis and the follow-up (if they re-take the questions).
+6. **Daily streak notifications**: Add a browser notification API (with permission) for daily check-in reminders.

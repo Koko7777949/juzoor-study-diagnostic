@@ -68,14 +68,17 @@ export interface ScoreSnapshot {
   scores: Record<string, number>; // causeId -> score (0..100), excluded/hidden causes omitted
 }
 
-// A persisted per-day check-in for a (solution, dayIdx) pair.
+// A persisted per-day check-in for a (planId, solution, dayIdx) triple.
+// The planId scope ensures that saving a new plan starts a fresh check-in
+// tracker instead of inheriting stale completions from a previous plan.
 // Replaces the previously-local PlanTimeline checkbox state so that
 // progress survives page reloads and feeds the plan-progress summary card.
 export interface DayCheckin {
+  planId: string;         // the plan this check-in belongs to ("" = unsaved draft)
   solutionId: string;
-  dayIdx: number;        // 0..6
+  dayIdx: number;         // 0..6
   completed: boolean;
-  completedAt?: number; // timestamp when marked complete (removed when unmarked)
+  completedAt?: number;   // timestamp when marked complete (removed when unmarked)
 }
 
 // ============================================================
@@ -598,7 +601,25 @@ export const useJuzoor = create<JuzoorStore>()(
       // ============================================================
       savePlan: () => {
         const id = `PLAN-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-        set({ planId: id, planSavedAt: Date.now() });
+        // Migrate any draft check-ins (planId="") to the newly-saved planId
+        // so progress made before saving is preserved on the saved plan.
+        const prevCheckins = get().dayCheckins;
+        const migrated: Record<string, DayCheckin> = {};
+        let changed = false;
+        for (const [k, v] of Object.entries(prevCheckins)) {
+          if (v.planId === "") {
+            const newKey = `${id}-${v.solutionId}-${v.dayIdx}`;
+            migrated[newKey] = { ...v, planId: id };
+            changed = true;
+          } else {
+            migrated[k] = v;
+          }
+        }
+        set({
+          planId: id,
+          planSavedAt: Date.now(),
+          ...(changed ? { dayCheckins: migrated } : {}),
+        });
         get().logEvent("plan_saved", { planId: id });
       },
 
@@ -607,14 +628,16 @@ export const useJuzoor = create<JuzoorStore>()(
       },
 
       toggleDayCheckin: (solutionId, dayIdx) => {
-        const key = `${solutionId}-${dayIdx}`;
+        const planId = get().planId ?? "";
+        const key = `${planId}-${solutionId}-${dayIdx}`;
         const prev = get().dayCheckins[key];
         const completed = prev ? !prev.completed : true;
         const next: DayCheckin = completed
-          ? { solutionId, dayIdx, completed: true, completedAt: Date.now() }
-          : { solutionId, dayIdx, completed: false };
+          ? { planId, solutionId, dayIdx, completed: true, completedAt: Date.now() }
+          : { planId, solutionId, dayIdx, completed: false };
         set((s) => ({ dayCheckins: { ...s.dayCheckins, [key]: next } }));
         get().logEvent("day_checkin_toggled", {
+          planId,
           solutionId,
           dayIdx,
           completed,

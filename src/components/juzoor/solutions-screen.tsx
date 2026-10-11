@@ -13,6 +13,9 @@ import {
   Crown,
   SearchX,
   ListTree,
+  GitCompare,
+  Star,
+  Lightbulb,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useJuzoor } from "@/lib/store";
@@ -35,7 +38,21 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import type { Solution, SolutionScore } from "@/lib/engine/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Solution, SolutionScore, Profile } from "@/lib/engine/types";
 
 const DEFAULT_WEIGHTS = { wE: 35, wA: 25, wS: 15, wF: 25 };
 
@@ -57,12 +74,16 @@ export function SolutionsScreen() {
   const setWeights = useJuzoor((s) => s.setWeights);
   const toggleSolution = useJuzoor((s) => s.toggleSolution);
   const goToScenarios = useJuzoor((s) => s.goToScenarios);
+  const profile = useJuzoor((s) => s.engine.profile);
 
   // Expansion state — multiple solutions can be open simultaneously so the
   // user can compare details side-by-side. Set<id> for O(1) lookup.
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(
     () => new Set<string>(),
   );
+
+  // Side-by-side comparison dialog state
+  const [compareOpen, setCompareOpen] = React.useState(false);
 
   const toggleExpand = React.useCallback((id: string) => {
     setExpandedIds((prev) => {
@@ -139,6 +160,20 @@ export function SolutionsScreen() {
         </p>
       </div>
 
+      {/* Side-by-side comparison trigger */}
+      <div className="flex justify-center">
+        <Button
+          type="button"
+          variant="outline"
+          className="touch-target h-11 border-app-primary/40 text-app-primary hover:bg-app-primary/5 hover:text-app-primary px-5 gap-2"
+          onClick={() => setCompareOpen(true)}
+          disabled={solutionScores.length < 2}
+        >
+          <GitCompare className="size-4" aria-hidden="true" />
+          قارن حلوين
+        </Button>
+      </div>
+
       <Separator label="جدول المقارنة" />
 
       {/* Solution count summary */}
@@ -206,6 +241,17 @@ export function SolutionsScreen() {
         اعرض السيناريوهات
         <ChevronLeft className="size-5" aria-hidden="true" />
       </Button>
+
+      {/* Side-by-side comparison dialog */}
+      <SolutionComparisonDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        scores={solutionScores}
+        solutions={content.solutions}
+        causes={content.causes}
+        profile={profile}
+        onGoToScenarios={goToScenarios}
+      />
     </div>
   );
 }
@@ -832,5 +878,561 @@ function Rating({ label, value }: { label: string; value: number }) {
       <span className="text-[10px] text-app-secondary">{label}</span>
       <span className="text-xs font-bold text-app-text tabular-nums">{value}/5</span>
     </div>
+  );
+}
+
+// ============================================================
+// Side-by-side comparison dialog
+// Lets the user pick exactly 2 solutions and see them compared
+// across all criteria with star ratings, winner highlights, and
+// a profile-based "which is better for me?" insight.
+// ============================================================
+
+function truncateLabel(s: string, max = 36): string {
+  if (s.length <= max) return s;
+  return `${s.slice(0, max).trimEnd()}…`;
+}
+
+/** Picks the winner side based on which value is "better". Returns null on ties. */
+function pickWinner(
+  a: number,
+  b: number,
+  mode: "higher" | "lower",
+): "left" | "right" | null {
+  if (a === b) return null;
+  if (mode === "higher") return a > b ? "left" : "right";
+  return a < b ? "left" : "right";
+}
+
+/** Star rating row — filled stars for `value`, empty for the rest (out of `max`). */
+function StarRating({ value, max = 5 }: { value: number; max?: number }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      aria-label={`${value} من ${max} نجوم`}
+      role="img"
+    >
+      <span className="inline-flex items-center gap-0.5" aria-hidden="true">
+        {Array.from({ length: max }, (_, i) => (
+          <Star
+            key={i}
+            className={cn(
+              "size-3 sm:size-3.5 transition-colors",
+              i < value
+                ? "fill-amber-400 text-amber-400"
+                : "fill-transparent text-app-secondary/40",
+            )}
+          />
+        ))}
+      </span>
+      <span className="text-xs font-bold text-app-text tabular-nums">
+        {value}/{max}
+      </span>
+    </span>
+  );
+}
+
+/** Dropdown picker for choosing one of the available solutions. */
+function SolutionPicker({
+  value,
+  onChange,
+  scores,
+  solutions,
+  excludeId,
+  label,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+  scores: SolutionScore[];
+  solutions: Solution[];
+  excludeId: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-xs font-semibold text-app-secondary flex items-center gap-1">
+        <span
+          className="size-4 rounded-full bg-app-primary/10 text-app-primary inline-flex items-center justify-center text-[10px] font-bold"
+          aria-hidden="true"
+        >
+          {label === "الحل الأول" ? "١" : "٢"}
+        </span>
+        {label}
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-full h-auto min-h-11 py-2 ps-3 pe-8 text-start">
+          <SelectValue placeholder="اختار حل..." />
+        </SelectTrigger>
+        <SelectContent>
+          {scores.map((sc) => {
+            const sol = solutions.find((s) => s.id === sc.solutionId);
+            if (!sol) return null;
+            const disabled = sc.solutionId === excludeId;
+            return (
+              <SelectItem
+                key={sc.solutionId}
+                value={sc.solutionId}
+                disabled={disabled}
+              >
+                <span className="line-clamp-1">{truncateLabel(sol.label_ar)}</span>
+                <span className="text-app-secondary tabular-nums shrink-0">
+                  — {sc.score}
+                </span>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+type Winner = "left" | "right" | null;
+
+interface ComparisonRow {
+  label: string;
+  left: React.ReactNode;
+  right: React.ReactNode;
+  winner: Winner;
+}
+
+/** 3-column comparison table: criterion | solution A | solution B. */
+function SideBySideComparisonTable({
+  leftSol,
+  rightSol,
+  leftScore,
+  rightScore,
+  causes,
+}: {
+  leftSol: Solution;
+  rightSol: Solution;
+  leftScore: SolutionScore;
+  rightScore: SolutionScore;
+  causes: { id: string; label_ar: string }[];
+}) {
+  const rows: ComparisonRow[] = [
+    {
+      label: "الفاعلية",
+      left: <StarRating value={leftScore.E} />,
+      right: <StarRating value={rightScore.E} />,
+      winner: pickWinner(leftScore.E, rightScore.E, "higher"),
+    },
+    {
+      label: "السهولة",
+      left: <StarRating value={leftScore.A} />,
+      right: <StarRating value={rightScore.A} />,
+      winner: pickWinner(leftScore.A, rightScore.A, "higher"),
+    },
+    {
+      label: "السرعة",
+      left: <StarRating value={leftScore.S} />,
+      right: <StarRating value={rightScore.S} />,
+      winner: pickWinner(leftScore.S, rightScore.S, "higher"),
+    },
+    {
+      label: "الملاءمة",
+      left: <StarRating value={leftScore.fit} />,
+      right: <StarRating value={rightScore.fit} />,
+      winner: pickWinner(leftScore.fit, rightScore.fit, "higher"),
+    },
+    {
+      label: "الدرجة",
+      left: (
+        <span className="font-bold text-app-text tabular-nums text-sm">
+          {leftScore.score}
+        </span>
+      ),
+      right: (
+        <span className="font-bold text-app-text tabular-nums text-sm">
+          {rightScore.score}
+        </span>
+      ),
+      winner: pickWinner(leftScore.score, rightScore.score, "higher"),
+    },
+    {
+      label: "الأولوية",
+      left: (
+        <span className="font-bold text-app-primary tabular-nums text-sm">
+          {leftScore.priority}
+        </span>
+      ),
+      right: (
+        <span className="font-bold text-app-primary tabular-nums text-sm">
+          {rightScore.priority}
+        </span>
+      ),
+      winner: pickWinner(leftScore.priority, rightScore.priority, "higher"),
+    },
+    {
+      label: "دقيقة/يوم",
+      left: (
+        <span className="text-app-text tabular-nums text-sm">
+          {leftSol.dailyMinutes === 0 ? "—" : leftSol.dailyMinutes}
+        </span>
+      ),
+      right: (
+        <span className="text-app-text tabular-nums text-sm">
+          {rightSol.dailyMinutes === 0 ? "—" : rightSol.dailyMinutes}
+        </span>
+      ),
+      winner: pickWinner(leftSol.dailyMinutes, rightSol.dailyMinutes, "lower"),
+    },
+    {
+      label: "السبب",
+      left: (
+        <span className="text-xs text-app-text leading-snug">
+          {causeLabelFor(leftScore, causes)}
+        </span>
+      ),
+      right: (
+        <span className="text-xs text-app-text leading-snug">
+          {causeLabelFor(rightScore, causes)}
+        </span>
+      ),
+      winner: null,
+    },
+    {
+      label: "يحتاج فريق؟",
+      left: (
+        <span
+          className={cn(
+            "text-sm font-semibold",
+            leftSol.needsTeam ? "text-app-secondary" : "text-app-success",
+          )}
+        >
+          {leftSol.needsTeam ? "آه" : "لأ"}
+        </span>
+      ),
+      right: (
+        <span
+          className={cn(
+            "text-sm font-semibold",
+            rightSol.needsTeam ? "text-app-secondary" : "text-app-success",
+          )}
+        >
+          {rightSol.needsTeam ? "آه" : "لأ"}
+        </span>
+      ),
+      winner: null,
+    },
+  ];
+
+  return (
+    <div className="rounded-xl border border-border overflow-hidden bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-app-muted/60 hover:bg-app-muted/60">
+            <TableHead className="text-xs font-semibold text-app-secondary py-2.5 w-1/3">
+              المعيار
+            </TableHead>
+            <TableHead className="text-xs font-semibold text-app-secondary text-center py-2.5">
+              الحل الأول
+            </TableHead>
+            <TableHead className="text-xs font-semibold text-app-secondary text-center py-2.5">
+              الحل الثاني
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row, i) => (
+            <TableRow
+              key={i}
+              className={cn(
+                "border-border",
+                i % 2 === 1 && "bg-app-muted/20",
+              )}
+            >
+              <TableCell className="text-xs font-medium text-app-secondary py-2.5 align-middle">
+                {row.label}
+              </TableCell>
+              <TableCell
+                className={cn(
+                  "text-center py-2.5 align-middle",
+                  row.winner === "left" &&
+                    "bg-app-success/15 border-start-2 border-app-success",
+                )}
+              >
+                {row.left}
+              </TableCell>
+              <TableCell
+                className={cn(
+                  "text-center py-2.5 align-middle",
+                  row.winner === "right" &&
+                    "bg-app-success/15 border-start-2 border-app-success",
+                )}
+              >
+                {row.right}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+/** Compact scenario card showing the "expected" scenario for one solution. */
+function ScenarioCard({
+  sol,
+  title,
+}: {
+  sol: Solution;
+  title: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 flex flex-col gap-1.5">
+      <span className="text-[10px] font-semibold text-app-secondary uppercase tracking-wider">
+        {title}
+      </span>
+      <p className="text-xs text-app-text leading-relaxed line-clamp-4">
+        {sol.scenarios?.expected_ar ?? "—"}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Analyzes the two solutions against the user's profile and produces
+ * the most relevant "which is better for me?" insight.
+ *
+ * Priority:
+ * 1. If scores within 5 points → "try both"
+ * 2. If one has higher fit → "X أنسب لملاءمتك"
+ * 3. If urgent + one is faster → "X أسرع ومناسب لقرب الامتحان"
+ * 4. If limited time + one needs less daily time → "X يحتاج وقت أقل يومياً"
+ * 5. Default: higher score wins
+ */
+function analyzeFit(
+  leftSol: Solution,
+  rightSol: Solution,
+  leftScore: SolutionScore,
+  rightScore: SolutionScore,
+  profile: Profile | null,
+): string {
+  const scoreDiff = Math.abs(leftScore.score - rightScore.score);
+
+  // 1. Very close scores → recommend trying both
+  if (scoreDiff <= 5) {
+    return "الحلين متقاربين جداً — جرّب الاتنين وشوف إيه اللي يناسبك أكتر.";
+  }
+
+  // 2. Higher fit → recommend that one
+  if (leftScore.fit !== rightScore.fit) {
+    const fitWinner = leftScore.fit > rightScore.fit ? "الحل الأول" : "الحل الثاني";
+    return `${fitWinner} أنسب لملاءمتك (وقتك/فريقك).`;
+  }
+
+  // 3. Urgent + speed difference
+  if (profile?.urgent && leftScore.S !== rightScore.S) {
+    const faster = leftScore.S > rightScore.S ? "الحل الأول" : "الحل الثاني";
+    return `${faster} أسرع ومناسب لقرب الامتحان.`;
+  }
+
+  // 4. Limited time + daily minutes difference
+  if (
+    profile &&
+    profile.minutesPerDay <= 30 &&
+    leftSol.dailyMinutes !== rightSol.dailyMinutes
+  ) {
+    const lessTime =
+      leftSol.dailyMinutes < rightSol.dailyMinutes ? "الحل الأول" : "الحل الثاني";
+    return `${lessTime} يحتاج وقت أقل يومياً.`;
+  }
+
+  // 5. Default: higher score
+  const better = leftScore.score > rightScore.score ? "الحل الأول" : "الحل الثاني";
+  const betterScore = leftScore.score > rightScore.score ? leftScore : rightScore;
+  const worseScore = leftScore.score > rightScore.score ? rightScore : leftScore;
+  return `${better} درجته أعلى (${betterScore.score} مقابل ${worseScore.score}).`;
+}
+
+function WhichIsBetterCard({
+  leftSol,
+  rightSol,
+  leftScore,
+  rightScore,
+  profile,
+}: {
+  leftSol: Solution;
+  rightSol: Solution;
+  leftScore: SolutionScore;
+  rightScore: SolutionScore;
+  profile: Profile | null;
+}) {
+  const insight = analyzeFit(leftSol, rightSol, leftScore, rightScore, profile);
+
+  return (
+    <div className="bg-app-accent/15 border border-app-accent/40 rounded-xl p-4 flex flex-col gap-2">
+      <h3 className="text-sm font-semibold text-app-text flex items-center gap-2">
+        <Lightbulb
+          className="size-4 text-app-primary shrink-0"
+          aria-hidden="true"
+        />
+        أيهما أنسب لي؟
+      </h3>
+      <p className="text-sm text-app-text leading-relaxed">{insight}</p>
+    </div>
+  );
+}
+
+function SolutionComparisonDialog({
+  open,
+  onOpenChange,
+  scores,
+  solutions,
+  causes,
+  profile,
+  onGoToScenarios,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  scores: SolutionScore[];
+  solutions: Solution[];
+  causes: { id: string; label_ar: string }[];
+  profile: Profile | null;
+  onGoToScenarios: () => void;
+}) {
+  // Picker state — defaults are set when the dialog opens
+  const [leftId, setLeftId] = React.useState<string>("");
+  const [rightId, setRightId] = React.useState<string>("");
+
+  // Reset to the first two solutions each time the dialog opens
+  const wasOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    if (open && !wasOpenRef.current && scores.length >= 2) {
+      setLeftId(scores[0].solutionId);
+      setRightId(scores[1].solutionId);
+    }
+    wasOpenRef.current = open;
+  }, [open, scores]);
+
+  // Defensive: ensure IDs are valid and different
+  const safeLeftId = scores.find((s) => s.solutionId === leftId)
+    ? leftId
+    : (scores[0]?.solutionId ?? "");
+  const safeRightId =
+    scores.find((s) => s.solutionId === rightId) && rightId !== safeLeftId
+      ? rightId
+      : (scores.find((s) => s.solutionId !== safeLeftId)?.solutionId ?? "");
+
+  const leftScore = scores.find((s) => s.solutionId === safeLeftId);
+  const rightScore = scores.find((s) => s.solutionId === safeRightId);
+  const leftSol = solutions.find((s) => s.id === safeLeftId);
+  const rightSol = solutions.find((s) => s.id === safeRightId);
+
+  // Defensive fallback when there aren't two solutions to compare
+  if (!leftScore || !rightScore || !leftSol || !rightSol) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitCompare
+                className="size-5 text-app-primary"
+                aria-hidden="true"
+              />
+              مقارنة حلوين
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-app-secondary">
+            محتاج حلّين على الأقل عشان نقارنهم. خلّص الأسئلة الأول.
+          </p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <GitCompare
+              className="size-5 text-app-primary shrink-0"
+              aria-hidden="true"
+            />
+            مقارنة حلوين
+          </DialogTitle>
+          <p className="text-xs text-app-secondary leading-relaxed">
+            اختار حلّين وقارنهم على كل المعايير — الخلية الخضراء هي الأحسن في كل صف.
+          </p>
+        </DialogHeader>
+
+        {/* Solution pickers */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <SolutionPicker
+            value={safeLeftId}
+            onChange={setLeftId}
+            scores={scores}
+            solutions={solutions}
+            excludeId={safeRightId}
+            label="الحل الأول"
+          />
+          <SolutionPicker
+            value={safeRightId}
+            onChange={setRightId}
+            scores={scores}
+            solutions={solutions}
+            excludeId={safeLeftId}
+            label="الحل الثاني"
+          />
+        </div>
+
+        {/* Comparison table */}
+        <SideBySideComparisonTable
+          leftSol={leftSol}
+          rightSol={rightSol}
+          leftScore={leftScore}
+          rightScore={rightScore}
+          causes={causes}
+        />
+
+        {/* Scenarios section */}
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold text-app-text flex items-center gap-1.5">
+            <ListTree
+              className="size-4 text-app-primary shrink-0"
+              aria-hidden="true"
+            />
+            السيناريوهات
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ScenarioCard sol={leftSol} title="الحل الأول" />
+            <ScenarioCard sol={rightSol} title="الحل الثاني" />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              onOpenChange(false);
+              onGoToScenarios();
+            }}
+            className="text-xs text-app-primary hover:text-app-primary/80 hover:underline self-start flex items-center gap-1 mt-1 ps-1"
+          >
+            <ChevronLeft className="size-3.5" aria-hidden="true" />
+            اعرض كل السيناريوهات
+          </button>
+        </div>
+
+        {/* Which is better for me? */}
+        <WhichIsBetterCard
+          leftSol={leftSol}
+          rightSol={rightSol}
+          leftScore={leftScore}
+          rightScore={rightScore}
+          profile={profile}
+        />
+
+        {/* Close button */}
+        <DialogFooter className="sm:justify-center pt-1">
+          <Button
+            type="button"
+            className="bg-app-primary text-white hover:bg-app-primary/90 h-11 px-6 w-full sm:w-auto"
+            onClick={() => onOpenChange(false)}
+          >
+            تمام، فهمت
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

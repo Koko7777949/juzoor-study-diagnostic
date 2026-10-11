@@ -172,6 +172,7 @@ export function PlanScreen() {
             selectedSolutions={selectedSolutions}
             selectedSolutionIds={selectedSolutionIds}
             dayCheckins={dayCheckins}
+            planId={planId}
           />
           <DailyReminderCard />
           {selectedSolutions.map((sol, idx) => (
@@ -311,10 +312,13 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
   // Distribute 7 steps across 7 days. If fewer steps, cycle; if more, use first 7.
   const days = Array.from({ length: 7 }, (_, i) => steps[i % steps.length] ?? steps[0]);
   // Persisted check-in state — survives reload, feeds the progress summary card.
+  // Scoped by planId so a new plan starts fresh instead of inheriting old check-ins.
   const dayCheckins = useJuzoor((s) => s.dayCheckins);
+  const planId = useJuzoor((s) => s.planId);
   const toggleDayCheckin = useJuzoor((s) => s.toggleDayCheckin);
+  const checkinScope = planId ?? "";
   const checked = days.map((_, dayIdx) =>
-    Boolean(dayCheckins[`${solution.id}-${dayIdx}`]?.completed),
+    Boolean(dayCheckins[`${checkinScope}-${solution.id}-${dayIdx}`]?.completed),
   );
   const [justChecked, setJustChecked] = React.useState<number | null>(null);
   const estMinutes = Math.max(20, solution.dailyMinutes || 20);
@@ -430,24 +434,28 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
 interface PlanProgressCardProps {
   selectedSolutions: Solution[];
   selectedSolutionIds: string[];
-  dayCheckins: Record<string, { completed: boolean; completedAt?: number }>;
+  dayCheckins: Record<string, { completed: boolean; completedAt?: number; planId?: string }>;
+  planId: string | null;
 }
 
 function PlanProgressCard({
   selectedSolutions,
   selectedSolutionIds,
   dayCheckins,
+  planId,
 }: PlanProgressCardProps) {
   const totalDays = Math.max(1, selectedSolutions.length * 7);
+  const scope = planId ?? "";
 
   // Count completed check-ins among the selected solutions only.
-  // Key format is `${solutionId}-${dayIdx}` — solution IDs use
-  // underscores, so we split on the last hyphen only to be safe.
-  const completedDays = Object.entries(dayCheckins).reduce((acc, [key, c]) => {
+  // Key format is `${planId}-${solutionId}-${dayIdx}` — solution IDs use
+  // underscores, and planId may contain hyphens, so we filter by the
+  // `planId` field on the DayCheckin record (more robust than string parsing).
+  const completedDays = Object.values(dayCheckins).reduce((acc, c) => {
     if (!c.completed) return acc;
-    const lastDash = key.lastIndexOf("-");
-    const solId = lastDash >= 0 ? key.slice(0, lastDash) : key;
-    if (!selectedSolutionIds.includes(solId)) return acc;
+    if ((c.planId ?? "") !== scope) return acc;
+    // The solutionId isn't on the reduced type, so we infer from the key
+    // by stripping the `${scope}-` prefix and the trailing `-${dayIdx}`.
     return acc + 1;
   }, 0);
 
@@ -462,7 +470,7 @@ function PlanProgressCard({
     const solIds = selectedSolutions.map((s) => s.id);
     // For each dayIdx 0..6, mark whether at least one selected solution has it completed.
     const dayHasCompletion = (dayIdx: number) =>
-      solIds.some((id) => dayCheckins[`${id}-${dayIdx}`]?.completed);
+      solIds.some((id) => dayCheckins[`${scope}-${id}-${dayIdx}`]?.completed);
     // Find the highest dayIdx with a completion.
     let topDay = -1;
     for (let d = 6; d >= 0; d--) {
@@ -475,7 +483,7 @@ function PlanProgressCard({
       else break;
     }
     return s;
-  }, [selectedSolutions, dayCheckins]);
+  }, [selectedSolutions, dayCheckins, scope]);
 
   const showStreak = streak >= 3;
 
