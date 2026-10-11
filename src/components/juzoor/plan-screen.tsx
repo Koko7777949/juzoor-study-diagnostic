@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useReducedMotion,
+} from "framer-motion";
 import {
   Download,
   Printer,
@@ -9,6 +13,7 @@ import {
   Calendar,
   Target,
   ChevronLeft,
+  ChevronDown,
   RefreshCw,
   Check,
   Sparkles,
@@ -16,6 +21,12 @@ import {
   TrendingUp,
   Flame,
   BellRing,
+  Lightbulb,
+  Clock,
+  MapPin,
+  Moon,
+  Users,
+  Smartphone,
 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
 import { toast } from "sonner";
@@ -24,6 +35,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { CelebrationBurst } from "./celebration-burst";
 import type { Solution } from "@/lib/engine/types";
 
@@ -48,6 +64,7 @@ export function PlanScreen() {
     x: number;
     y: number;
   } | null>(null);
+  const [tipsOpen, setTipsOpen] = React.useState(false);
 
   if (!content) return null;
 
@@ -183,7 +200,7 @@ export function PlanScreen() {
 
       {/* Review date + save info (visible in print too, simplified styling) */}
       <div className="flex flex-col gap-3 no-print print:hidden">
-        <Card className="p-4 bg-app-primary/5 border-app-primary/30 flex flex-col gap-3">
+        <Card className="p-4 bg-card-gradient shadow-card-soft border-app-primary/30 flex flex-col gap-3">
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="size-4 text-app-primary" aria-hidden="true" />
             <span className="text-app-secondary">موعد المراجعة:</span>
@@ -213,6 +230,13 @@ export function PlanScreen() {
           )}
         </Card>
       </div>
+
+      {/* Study Tips & Resources — general study guidance (collapsible, hidden in print) */}
+      <StudyTipsSection
+        open={tipsOpen}
+        onOpenChange={setTipsOpen}
+        messages={messages}
+      />
 
       {/* Action buttons (hidden in print) */}
       <div className="flex flex-col gap-3 no-print print:hidden">
@@ -342,7 +366,7 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.06 }}
-      className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4 print:break-inside-avoid print:border-black print:bg-white print:p-4"
+      className="bg-card-gradient shadow-card-soft rounded-2xl border border-border p-5 flex flex-col gap-4 print:break-inside-avoid print:border-black print:bg-white print:bg-none print:p-4"
     >
       <div className="flex items-start gap-2.5 print:text-black">
         <span className="shrink-0 size-7 rounded-full bg-app-primary text-white flex items-center justify-center text-xs font-bold print:bg-black print:text-white">
@@ -411,7 +435,7 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
         })}
       </ol>
 
-      <div className="bg-app-success/10 border border-app-success/30 rounded-xl p-3 flex flex-col gap-1 print:bg-white print:border-black print:text-black">
+      <div className="bg-card-gradient-success border border-app-success/30 rounded-xl p-3 flex flex-col gap-1 print:bg-white print:bg-none print:border-black print:text-black">
         <div className="flex items-center gap-2 text-sm font-semibold text-app-text print:text-black">
           <Target className="size-4 text-app-success print:text-black" aria-hidden="true" />
           مقياس النجاح
@@ -492,10 +516,10 @@ function PlanProgressCard({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className={`no-print print:hidden rounded-2xl border p-4 flex flex-col gap-3 ${
+      className={`no-print print:hidden rounded-2xl border p-4 flex flex-col gap-3 shadow-card-soft ${
         isComplete
-          ? "bg-app-success/10 border-app-success/40"
-          : "bg-card border-border"
+          ? "bg-card-gradient-success border-app-success/40"
+          : "bg-card-gradient border-border"
       }`}
       aria-label="تقدّمك في الخطة"
     >
@@ -569,7 +593,7 @@ function DailyReminderCard() {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: 0.05 }}
-      className="no-print print:hidden bg-app-primary/5 border border-app-primary/25 rounded-2xl p-4 flex flex-col gap-2"
+      className="no-print print:hidden bg-card-gradient-accent shadow-card-soft border border-app-primary/25 rounded-2xl p-4 flex flex-col gap-2"
     >
       <div className="flex items-center gap-2">
         <span className="shrink-0 size-8 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center">
@@ -584,6 +608,110 @@ function DailyReminderCard() {
         نصيحة: حط موعد ثابت كل يوم (مثلاً بعد الفجر أو قبل النوم)
       </p>
     </motion.div>
+  );
+}
+
+// ============================================================
+// StudyTipsSection — collapsible general study guidance.
+// Defaults to collapsed, hidden in print, doesn't depend on
+// any specific solution. Six tips with icons, titles, and
+// descriptions, laid out as a 2-column grid on desktop and
+// single column on mobile. Each tip card uses the soft
+// card gradient + shadow utilities.
+// ============================================================
+
+interface StudyTipsSectionProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  messages: Record<string, string>;
+}
+
+const STUDY_TIPS: Array<{
+  key: string;
+  Icon: typeof Clock;
+}> = [
+  { key: "tip_1", Icon: Clock },
+  { key: "tip_2", Icon: MapPin },
+  { key: "tip_3", Icon: Moon },
+  { key: "tip_4", Icon: Calendar },
+  { key: "tip_5", Icon: Users },
+  { key: "tip_6", Icon: Smartphone },
+];
+
+function StudyTipsSection({ open, onOpenChange, messages }: StudyTipsSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
+  const title = messages.tips_title || "نصائح عامة للمذاكرة";
+  const subtitle = messages.tips_subtitle || "إرشادات سريعة تساعدك في رحلتك";
+
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={onOpenChange}
+      className="no-print print:hidden bg-card-gradient shadow-card-soft rounded-2xl border border-border overflow-hidden"
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="touch-target w-full flex items-center gap-2 p-3 text-start hover:bg-app-muted/40 transition-colors"
+          aria-expanded={open}
+          aria-controls="study-tips-content"
+        >
+          <span className="shrink-0 size-8 rounded-full bg-app-accent/30 text-app-primary flex items-center justify-center">
+            <Lightbulb className="size-4" aria-hidden="true" />
+          </span>
+          <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+            <span className="text-sm font-bold text-app-text">{title}</span>
+            <span className="text-xs text-app-secondary leading-relaxed">
+              {subtitle}
+            </span>
+          </div>
+          <motion.span
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+            className="shrink-0 text-app-secondary"
+          >
+            <ChevronDown className="size-4" aria-hidden="true" />
+          </motion.span>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent id="study-tips-content">
+        <div className="px-3 pb-4 pt-1 border-t border-app-primary/10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3">
+            {STUDY_TIPS.map(({ key, Icon }, idx) => {
+              const tipTitle = messages[`${key}_title`];
+              const tipDesc = messages[`${key}_desc`];
+              if (!tipTitle || !tipDesc) return null;
+              return (
+                <motion.div
+                  key={key}
+                  initial={
+                    prefersReducedMotion ? false : { opacity: 0, y: 6 }
+                  }
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: prefersReducedMotion ? 0 : 0.22,
+                    delay: prefersReducedMotion ? 0 : Math.min(idx * 0.04, 0.24),
+                  }}
+                  className="bg-card-gradient shadow-card-soft rounded-xl border border-border p-3 flex flex-col gap-1.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 size-7 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center">
+                      <Icon className="size-3.5" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-sm font-bold text-app-text leading-snug">
+                      {tipTitle}
+                    </h3>
+                  </div>
+                  <p className="text-xs text-app-secondary leading-relaxed">
+                    {tipDesc}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

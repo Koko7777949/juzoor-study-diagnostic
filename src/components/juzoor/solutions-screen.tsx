@@ -148,7 +148,7 @@ export function SolutionsScreen() {
       </header>
 
       {/* Weight sliders — inline (not sticky to avoid overlapping table content) */}
-      <div className="bg-app-muted/40 rounded-xl p-3 border border-app-primary/10">
+      <div className="rounded-xl p-3 border border-app-primary/10">
         <WeightSliders
           values={weightValues}
           onChange={handleSliderChange}
@@ -267,7 +267,7 @@ function EmptySolutionsState() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className="size-16 rounded-full bg-app-muted flex items-center justify-center"
+        className="size-16 rounded-full bg-card-gradient shadow-card-soft border border-border flex items-center justify-center"
         aria-hidden="true"
       >
         <SearchX className="size-8 text-app-secondary" />
@@ -305,7 +305,7 @@ function ScoreLegend() {
     { color: "var(--confidence-low)", label: "منخفض", range: "< 40" },
   ];
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-app-secondary">
+    <div className="bg-card-gradient shadow-card-soft rounded-xl border border-border px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-app-secondary">
       <span className="font-semibold">دلالة الدرجة:</span>
       {buckets.map((b) => (
         <span key={b.label} className="flex items-center gap-1.5">
@@ -356,7 +356,7 @@ function WeightSliders({
   const sum = values.wE + values.wA + values.wS + values.wF || 1;
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4">
+    <div className="bg-card-gradient shadow-card-soft rounded-2xl border border-border p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-app-text flex items-center gap-2">
           <SlidersHorizontal className="size-4 text-app-primary" aria-hidden="true" />
@@ -735,9 +735,10 @@ function SolutionCard({
       className={cn(
         "relative rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all",
         selected
-          ? "border-app-primary bg-app-primary/5 shadow-sm"
-          : "border-border bg-card hover:border-app-primary/40",
-        isTop && "border-amber-400/70 ring-1 ring-amber-400/30 shadow-amber-400/10 shadow-md",
+          ? "border-app-primary bg-app-primary/5 shadow-card-soft"
+          : "bg-card-gradient shadow-card-soft border-border hover:border-app-primary/40",
+        isTop &&
+          "border-amber-400/70 ring-1 ring-amber-400/30 bg-card-gradient-accent shadow-card-hover",
         maxSelected && "opacity-60",
       )}
     >

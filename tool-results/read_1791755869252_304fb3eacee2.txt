@@ -1,0 +1,1439 @@
+     1→"use client";
+     2→
+     3→import * as React from "react";
+     4→import { motion } from "framer-motion";
+     5→import {
+     6→  RotateCcw,
+     7→  SlidersHorizontal,
+     8→  ChevronLeft,
+     9→  ChevronRight,
+    10→  Check,
+    11→  ArrowUp,
+    12→  ChevronDown,
+    13→  Crown,
+    14→  SearchX,
+    15→  ListTree,
+    16→  GitCompare,
+    17→  Star,
+    18→  Lightbulb,
+    19→} from "lucide-react";
+    20→import { toast } from "sonner";
+    21→import { useJuzoor } from "@/lib/store";
+    22→import { cn } from "@/lib/utils";
+    23→import { Button } from "@/components/ui/button";
+    24→import { Slider } from "@/components/ui/slider";
+    25→import { Label } from "@/components/ui/label";
+    26→import { Badge } from "@/components/ui/badge";
+    27→import { Checkbox } from "@/components/ui/checkbox";
+    28→import {
+    29→  Collapsible,
+    30→  CollapsibleTrigger,
+    31→  CollapsibleContent,
+    32→} from "@/components/ui/collapsible";
+    33→import {
+    34→  Table,
+    35→  TableHeader,
+    36→  TableBody,
+    37→  TableRow,
+    38→  TableHead,
+    39→  TableCell,
+    40→} from "@/components/ui/table";
+    41→import {
+    42→  Dialog,
+    43→  DialogContent,
+    44→  DialogHeader,
+    45→  DialogTitle,
+    46→  DialogFooter,
+    47→} from "@/components/ui/dialog";
+    48→import {
+    49→  Select,
+    50→  SelectContent,
+    51→  SelectItem,
+    52→  SelectTrigger,
+    53→  SelectValue,
+    54→} from "@/components/ui/select";
+    55→import type { Solution, SolutionScore, Profile } from "@/lib/engine/types";
+    56→
+    57→const DEFAULT_WEIGHTS = { wE: 35, wA: 25, wS: 15, wF: 25 };
+    58→
+    59→const MAX_SELECTED = 3;
+    60→
+    61→/** Returns the CSS variable name for a score bucket. */
+    62→function scoreBucket(score: number): { colorVar: string; label: string } {
+    63→  if (score >= 80) return { colorVar: "var(--app-success)", label: "ممتاز" };
+    64→  if (score >= 60) return { colorVar: "var(--app-primary)", label: "جيد" };
+    65→  if (score >= 40) return { colorVar: "var(--confidence-medium)", label: "متوسط" };
+    66→  return { colorVar: "var(--confidence-low)", label: "منخفض" };
+    67→}
+    68→
+    69→export function SolutionsScreen() {
+    70→  const content = useJuzoor((s) => s.content);
+    71→  const solutionScores = useJuzoor((s) => s.solutionScores);
+    72→  const selectedSolutionIds = useJuzoor((s) => s.selectedSolutionIds);
+    73→  const weights = useJuzoor((s) => s.weights);
+    74→  const setWeights = useJuzoor((s) => s.setWeights);
+    75→  const toggleSolution = useJuzoor((s) => s.toggleSolution);
+    76→  const goToScenarios = useJuzoor((s) => s.goToScenarios);
+    77→  const profile = useJuzoor((s) => s.engine.profile);
+    78→
+    79→  // Expansion state — multiple solutions can be open simultaneously so the
+    80→  // user can compare details side-by-side. Set<id> for O(1) lookup.
+    81→  const [expandedIds, setExpandedIds] = React.useState<Set<string>>(
+    82→    () => new Set<string>(),
+    83→  );
+    84→
+    85→  // Side-by-side comparison dialog state
+    86→  const [compareOpen, setCompareOpen] = React.useState(false);
+    87→
+    88→  const toggleExpand = React.useCallback((id: string) => {
+    89→    setExpandedIds((prev) => {
+    90→      const next = new Set(prev);
+    91→      if (next.has(id)) next.delete(id);
+    92→      else next.add(id);
+    93→      return next;
+    94→    });
+    95→  }, []);
+    96→
+    97→  if (!content) return null;
+    98→
+    99→  // ============================================================
+   100→  // Empty state (defensive — engine always emits 3+ solutions when
+   101→  // reaching this screen, but if data is missing we don't want to crash)
+   102→  // ============================================================
+   103→  if (solutionScores.length === 0) {
+   104→    return <EmptySolutionsState />;
+   105→  }
+   106→
+   107→  const weightValues = {
+   108→    wE: Math.round(weights.wE * 100),
+   109→    wA: Math.round(weights.wA * 100),
+   110→    wS: Math.round(weights.wS * 100),
+   111→    wF: Math.round(weights.wF * 100),
+   112→  };
+   113→
+   114→  const handleSliderChange = (key: "wE" | "wA" | "wS" | "wF", val: number) => {
+   115→    const next = { ...weightValues, [key]: val };
+   116→    setWeights({
+   117→      wE: next.wE / 100,
+   118→      wA: next.wA / 100,
+   119→      wS: next.wS / 100,
+   120→      wF: next.wF / 100,
+   121→    });
+   122→  };
+   123→
+   124→  const resetWeights = () => {
+   125→    setWeights({
+   126→      ...DEFAULT_WEIGHTS,
+   127→      wE: DEFAULT_WEIGHTS.wE / 100,
+   128→      wA: DEFAULT_WEIGHTS.wA / 100,
+   129→      wS: DEFAULT_WEIGHTS.wS / 100,
+   130→      wF: DEFAULT_WEIGHTS.wF / 100,
+   131→    });
+   132→    toast.success("تمت إعادة ضبط الأوزان للقيم الافتراضية");
+   133→  };
+   134→
+   135→  const handleRowToggle = (id: string) => {
+   136→    const isSelected = selectedSolutionIds.includes(id);
+   137→    if (!isSelected && selectedSolutionIds.length >= MAX_SELECTED) return;
+   138→    toggleSolution(id);
+   139→  };
+   140→
+   141→  return (
+   142→    <div className="max-w-md mx-auto px-4 pt-6 pb-12 flex flex-col gap-6">
+   143→      <header className="flex flex-col gap-1.5 pt-2">
+   144→        <h1 className="text-2xl font-bold text-app-text leading-snug">مقارنة الحلول</h1>
+   145→        <p className="text-sm text-app-secondary leading-relaxed">
+   146→          نصيحتك بالحلول الأنسب حسب أسبابك ووقتك
+   147→        </p>
+   148→      </header>
+   149→
+   150→      {/* Weight sliders — inline (not sticky to avoid overlapping table content) */}
+   151→      <div className="bg-app-muted/40 rounded-xl p-3 border border-app-primary/10">
+   152→        <WeightSliders
+   153→          values={weightValues}
+   154→          onChange={handleSliderChange}
+   155→          onReset={resetWeights}
+   156→        />
+   157→        <p className="text-xs text-app-secondary mt-2 flex items-center gap-1.5 px-1">
+   158→          <SlidersHorizontal className="size-3 shrink-0 text-app-primary" aria-hidden="true" />
+   159→          حرّك الأوزان وشوف الترتيب بيتغير فوراً
+   160→        </p>
+   161→      </div>
+   162→
+   163→      {/* Side-by-side comparison trigger */}
+   164→      <div className="flex justify-center">
+   165→        <Button
+   166→          type="button"
+   167→          variant="outline"
+   168→          className="touch-target h-11 border-app-primary/40 text-app-primary hover:bg-app-primary/5 hover:text-app-primary px-5 gap-2"
+   169→          onClick={() => setCompareOpen(true)}
+   170→          disabled={solutionScores.length < 2}
+   171→        >
+   172→          <GitCompare className="size-4" aria-hidden="true" />
+   173→          قارن حلوين
+   174→        </Button>
+   175→      </div>
+   176→
+   177→      <Separator label="جدول المقارنة" />
+   178→
+   179→      {/* Solution count summary */}
+   180→      <div className="flex items-center justify-between text-xs text-app-secondary px-1">
+   181→        <span className="flex items-center gap-1.5">
+   182→          <ListTree className="size-3.5 shrink-0 text-app-primary" aria-hidden="true" />
+   183→          عدد الحلول:{" "}
+   184→          <span className="font-bold text-app-text tabular-nums">
+   185→            {solutionScores.length}
+   186→          </span>
+   187→          <span className="text-app-secondary/60" aria-hidden="true">—</span>
+   188→          المختار:{" "}
+   189→          <span className="font-bold text-app-primary tabular-nums">
+   190→            {selectedSolutionIds.length}
+   191→          </span>{" "}
+   192→          من <span className="tabular-nums">{MAX_SELECTED}</span>
+   193→        </span>
+   194→      </div>
+   195→
+   196→      {/* Comparison matrix - desktop table / mobile cards */}
+   197→      <div className="md:block hidden">
+   198→        <ComparisonTable
+   199→          scores={solutionScores}
+   200→          solutions={content.solutions}
+   201→          selectedIds={selectedSolutionIds}
+   202→          onToggle={handleRowToggle}
+   203→          expandedIds={expandedIds}
+   204→          onToggleExpand={toggleExpand}
+   205→          causes={content.causes}
+   206→        />
+   207→      </div>
+   208→      <div className="md:hidden flex flex-col gap-3">
+   209→        {solutionScores.map((sc, idx) => {
+   210→          const sol = content.solutions.find((s) => s.id === sc.solutionId);
+   211→          if (!sol) return null;
+   212→          const selected = selectedSolutionIds.includes(sc.solutionId);
+   213→          const maxSelected = selectedSolutionIds.length >= MAX_SELECTED && !selected;
+   214→          const isTop = idx === 0; // first in sorted list = #1 priority
+   215→          return (
+   216→            <SolutionCard
+   217→              key={sc.solutionId}
+   218→              solution={sol}
+   219→              score={sc}
+   220→              selected={selected}
+   221→              maxSelected={maxSelected}
+   222→              isTop={isTop}
+   223→              onToggle={() => handleRowToggle(sc.solutionId)}
+   224→              causes={content.causes}
+   225→              expanded={expandedIds.has(sc.solutionId)}
+   226→              onToggleExpand={() => toggleExpand(sc.solutionId)}
+   227→            />
+   228→          );
+   229→        })}
+   230→      </div>
+   231→
+   232→      {/* Color legend */}
+   233→      <ScoreLegend />
+   234→
+   235→      <Button
+   236→        type="button"
+   237→        className="touch-target h-12 text-base bg-app-primary text-white hover:bg-app-primary/90 mt-2"
+   238→        onClick={goToScenarios}
+   239→        disabled={selectedSolutionIds.length === 0}
+   240→      >
+   241→        اعرض السيناريوهات
+   242→        <ChevronLeft className="size-5" aria-hidden="true" />
+   243→      </Button>
+   244→
+   245→      {/* Side-by-side comparison dialog */}
+   246→      <SolutionComparisonDialog
+   247→        open={compareOpen}
+   248→        onOpenChange={setCompareOpen}
+   249→        scores={solutionScores}
+   250→        solutions={content.solutions}
+   251→        causes={content.causes}
+   252→        profile={profile}
+   253→        onGoToScenarios={goToScenarios}
+   254→      />
+   255→    </div>
+   256→  );
+   257→}
+   258→
+   259→// ============================================================
+   260→// Empty state — no solutions matched the top causes (defensive)
+   261→// ============================================================
+   262→function EmptySolutionsState() {
+   263→  const go = useJuzoor((s) => s.go);
+   264→  return (
+   265→    <div className="max-w-md mx-auto px-4 pt-12 pb-12 flex flex-col items-center gap-5 text-center">
+   266→      <motion.div
+   267→        initial={{ opacity: 0, y: 8 }}
+   268→        animate={{ opacity: 1, y: 0 }}
+   269→        transition={{ duration: 0.25 }}
+   270→        className="size-16 rounded-full bg-app-muted flex items-center justify-center"
+   271→        aria-hidden="true"
+   272→      >
+   273→        <SearchX className="size-8 text-app-secondary" />
+   274→      </motion.div>
+   275→
+   276→      <motion.div
+   277→        initial={{ opacity: 0 }}
+   278→        animate={{ opacity: 1 }}
+   279→        transition={{ duration: 0.25, delay: 0.1 }}
+   280→        className="flex flex-col gap-1.5"
+   281→      >
+   282→        <h2 className="text-lg font-bold text-app-text">مفيش حلول متاحة</h2>
+   283→        <p className="text-sm text-app-secondary leading-relaxed max-w-xs">
+   284→          مفيش حلول متاحة للأسباب اللي طلعت. جرّب تعيد الأسئلة بطريقة تانية.
+   285→        </p>
+   286→      </motion.div>
+   287→
+   288→      <Button
+   289→        type="button"
+   290→        className="touch-target h-11 bg-app-primary text-white hover:bg-app-primary/90"
+   291→        onClick={() => go("causes")}
+   292→      >
+   293→        <ChevronRight className="size-4" aria-hidden="true" />
+   294→        ارجع للأسئلة
+   295→      </Button>
+   296→    </div>
+   297→  );
+   298→}
+   299→
+   300→function ScoreLegend() {
+   301→  const buckets = [
+   302→    { color: "var(--app-success)", label: "ممتاز", range: "≥ 80" },
+   303→    { color: "var(--app-primary)", label: "جيد", range: "60-79" },
+   304→    { color: "var(--confidence-medium)", label: "متوسط", range: "40-59" },
+   305→    { color: "var(--confidence-low)", label: "منخفض", range: "< 40" },
+   306→  ];
+   307→  return (
+   308→    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-app-secondary">
+   309→      <span className="font-semibold">دلالة الدرجة:</span>
+   310→      {buckets.map((b) => (
+   311→        <span key={b.label} className="flex items-center gap-1.5">
+   312→          <span
+   313→            className="size-3 rounded-full inline-block"
+   314→            style={{ backgroundColor: b.color }}
+   315→            aria-hidden="true"
+   316→          />
+   317→          <span>{b.label}</span>
+   318→          <span className="text-app-secondary/70 tabular-nums">({b.range})</span>
+   319→        </span>
+   320→      ))}
+   321→      <span className="flex items-center gap-1 text-app-primary">
+   322→        <ArrowUp className="size-3" aria-hidden="true" />
+   323→        مختار (أعلى 3 أولويات)
+   324→      </span>
+   325→    </div>
+   326→  );
+   327→}
+   328→
+   329→function Separator({ label }: { label: string }) {
+   330→  return (
+   331→    <div className="flex items-center gap-3">
+   332→      <span className="text-xs font-semibold text-app-secondary uppercase tracking-wider">
+   333→        {label}
+   334→      </span>
+   335→      <span className="h-px flex-1 bg-border" aria-hidden="true" />
+   336→    </div>
+   337→  );
+   338→}
+   339→
+   340→function WeightSliders({
+   341→  values,
+   342→  onChange,
+   343→  onReset,
+   344→}: {
+   345→  values: { wE: number; wA: number; wS: number; wF: number };
+   346→  onChange: (key: "wE" | "wA" | "wS" | "wF", val: number) => void;
+   347→  onReset: () => void;
+   348→}) {
+   349→  const sliders = [
+   350→    { key: "wE" as const, label: "الفاعلية" },
+   351→    { key: "wA" as const, label: "السهولة" },
+   352→    { key: "wS" as const, label: "السرعة" },
+   353→    { key: "wF" as const, label: "الملاءمة" },
+   354→  ];
+   355→
+   356→  const sum = values.wE + values.wA + values.wS + values.wF || 1;
+   357→
+   358→  return (
+   359→    <div className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4">
+   360→      <div className="flex items-center justify-between">
+   361→        <h2 className="text-base font-semibold text-app-text flex items-center gap-2">
+   362→          <SlidersHorizontal className="size-4 text-app-primary" aria-hidden="true" />
+   363→          اضبط أولوياتك
+   364→        </h2>
+   365→        <Button
+   366→          type="button"
+   367→          variant="ghost"
+   368→          size="sm"
+   369→          className="touch-target text-xs text-app-secondary hover:text-app-primary px-2"
+   370→          onClick={onReset}
+   371→        >
+   372→          <RotateCcw className="size-3.5" aria-hidden="true" />
+   373→          إعادة الضبط
+   374→        </Button>
+   375→      </div>
+   376→
+   377→      <div className="flex flex-col gap-3">
+   378→        {sliders.map((s) => (
+   379→          <div key={s.key} className="flex flex-col gap-1.5">
+   380→            <div className="flex items-center justify-between text-sm">
+   381→              <Label htmlFor={`slider-${s.key}`} className="text-app-text font-medium">
+   382→                {s.label}
+   383→              </Label>
+   384→              <span className="font-bold text-app-primary tabular-nums">
+   385→                {Math.round((values[s.key] / sum) * 100)}%
+   386→              </span>
+   387→            </div>
+   388→            <Slider
+   389→              id={`slider-${s.key}`}
+   390→              value={[values[s.key]]}
+   391→              min={0}
+   392→              max={100}
+   393→              step={5}
+   394→              onValueChange={(v) => onChange(s.key, v[0])}
+   395→              aria-label={s.label}
+   396→            />
+   397→          </div>
+   398→        ))}
+   399→      </div>
+   400→
+   401→      <p className="text-xs text-app-secondary leading-relaxed">
+   402→        النسب بتتعدّل تلقائياً بحيث يكون مجموعها 100%.
+   403→      </p>
+   404→    </div>
+   405→  );
+   406→}
+   407→
+   408→function causeLabelFor(
+   409→  score: SolutionScore,
+   410→  causes: { id: string; label_ar: string }[],
+   411→): string {
+   412→  const top = causes.find((c) => c.id === score.causeIds[0]);
+   413→  return top?.label_ar ?? score.causeIds[0];
+   414→}
+   415→
+   416→// ============================================================
+   417→// Comparison table (desktop)
+   418→// Uses Radix Collapsible with `asChild` to render as <tbody> so each row
+   419→// group (data row + details row) is its own Collapsible unit.
+   420→// ============================================================
+   421→function ComparisonTable({
+   422→  scores,
+   423→  solutions,
+   424→  selectedIds,
+   425→  onToggle,
+   426→  expandedIds,
+   427→  onToggleExpand,
+   428→  causes,
+   429→}: {
+   430→  scores: SolutionScore[];
+   431→  solutions: Solution[];
+   432→  selectedIds: string[];
+   433→  onToggle: (id: string) => void;
+   434→  expandedIds: Set<string>;
+   435→  onToggleExpand: (id: string) => void;
+   436→  causes: { id: string; label_ar: string }[];
+   437→}) {
+   438→  return (
+   439→    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+   440→      <Table>
+   441→        <TableHeader>
+   442→          <TableRow className="bg-app-muted">
+   443→            <TableHead className="text-center text-app-secondary font-semibold text-xs w-10">اختيار</TableHead>
+   444→            <TableHead className="text-center text-app-secondary font-semibold text-xs w-12">تفاصيل</TableHead>
+   445→            <TableHead className="text-app-secondary font-semibold text-xs">الحل</TableHead>
+   446→            <TableHead className="text-center text-app-secondary font-semibold text-xs">الفاعلية</TableHead>
+   447→            <TableHead className="text-center text-app-secondary font-semibold text-xs">السهولة</TableHead>
+   448→            <TableHead className="text-center text-app-secondary font-semibold text-xs">السرعة</TableHead>
+   449→            <TableHead className="text-center text-app-secondary font-semibold text-xs">الملاءمة</TableHead>
+   450→            <TableHead className="text-center text-app-secondary font-semibold text-xs">الدرجة</TableHead>
+   451→            <TableHead className="text-center text-app-secondary font-semibold text-xs">الأولوية</TableHead>
+   452→            <TableHead className="text-center text-app-secondary font-semibold text-xs">دقيقة/يوم</TableHead>
+   453→          </TableRow>
+   454→        </TableHeader>
+   455→        <TableBody>
+   456→          {scores.map((sc, idx) => {
+   457→            const sol = solutions.find((s) => s.id === sc.solutionId);
+   458→            if (!sol) return null;
+   459→            const selected = selectedIds.includes(sc.solutionId);
+   460→            const disabled = !selected && selectedIds.length >= MAX_SELECTED;
+   461→            const bucket = scoreBucket(sc.score);
+   462→            const isExpanded = expandedIds.has(sc.solutionId);
+   463→            const isTop = idx === 0;
+   464→
+   465→            return (
+   466→              <Collapsible
+   467→                key={sc.solutionId}
+   468→                asChild
+   469→                open={isExpanded}
+   470→                onOpenChange={() => onToggleExpand(sc.solutionId)}
+   471→              >
+   472→                <tbody
+   473→                  className={cn(
+   474→                    "group scroll-mt-40",
+   475→                    selected && "bg-app-primary/5",
+   476→                    isTop && "ring-1 ring-inset ring-amber-400/40",
+   477→                  )}
+   478→                >
+   479→                  <TableRow
+   480→                    className={cn(
+   481→                      "border-b",
+   482→                      isTop && "bg-amber-50/40",
+   483→                      isExpanded && "border-b-app-primary/30",
+   484→                    )}
+   485→                  >
+   486→                    {/* Checkbox cell */}
+   487→                    <TableCell className="text-center">
+   488→                      <Checkbox
+   489→                        checked={selected}
+   490→                        disabled={disabled}
+   491→                        onCheckedChange={() => onToggle(sc.solutionId)}
+   492→                        onClick={(e) => e.stopPropagation()}
+   493→                        aria-label={`اختيار ${sol.label_ar}`}
+   494→                      />
+   495→                    </TableCell>
+   496→
+   497→                    {/* "تفاصيل" trigger button cell */}
+   498→                    <TableCell className="text-center">
+   499→                      <CollapsibleTrigger asChild>
+   500→                        <button
+   501→                          type="button"
+   502→                          className="size-8 rounded-md inline-flex items-center justify-center text-app-secondary hover:text-app-primary hover:bg-app-primary/10 transition-colors"
+   503→                          aria-label="تفاصيل الحل"
+   504→                          aria-expanded={isExpanded}
+   505→                          onClick={(e) => e.stopPropagation()}
+   506→                        >
+   507→                          <ChevronDown
+   508→                            className={cn(
+   509→                              "size-4 transition-transform duration-200",
+   510→                              isExpanded && "rotate-180",
+   511→                            )}
+   512→                            aria-hidden="true"
+   513→                          />
+   514→                        </button>
+   515→                      </CollapsibleTrigger>
+   516→                    </TableCell>
+   517→
+   518→                    {/* Solution name cell — also a trigger (per task a) */}
+   519→                    <TableCell className="text-app-text font-medium text-xs max-w-[180px]">
+   520→                      <CollapsibleTrigger asChild>
+   521→                        <button
+   522→                          type="button"
+   523→                          className="text-start flex items-center gap-1.5 hover:text-app-primary transition-colors"
+   524→                          aria-label={`عرض تفاصيل ${sol.label_ar}`}
+   525→                          aria-expanded={isExpanded}
+   526→                          onClick={(e) => e.stopPropagation()}
+   527→                        >
+   528→                          {isTop && (
+   529→                            <span className="inline-flex items-center gap-0.5 shrink-0 bg-amber-400 text-amber-950 rounded-full px-1.5 py-0.5 text-[10px] font-bold">
+   530→                              <Crown className="size-2.5" aria-hidden="true" />
+   531→                              الأفضل لك
+   532→                            </span>
+   533→                          )}
+   534→                          <span className="line-clamp-2">{sol.label_ar}</span>
+   535→                        </button>
+   536→                      </CollapsibleTrigger>
+   537→                    </TableCell>
+   538→
+   539→                    <TableCell className="text-center text-app-text tabular-nums">{sc.E}/5</TableCell>
+   540→                    <TableCell className="text-center text-app-text tabular-nums">{sc.A}/5</TableCell>
+   541→                    <TableCell className="text-center text-app-text tabular-nums">{sc.S}/5</TableCell>
+   542→                    <TableCell className="text-center text-app-text tabular-nums">{sc.fit}/5</TableCell>
+   543→
+   544→                    {/* Score cell with color bar */}
+   545→                    <TableCell className="text-center">
+   546→                      <div className="flex items-center gap-1.5 justify-center">
+   547→                        <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--app-muted)" }}>
+   548→                          <div
+   549→                            className="h-full rounded-full"
+   550→                            style={{ width: `${sc.score}%`, backgroundColor: bucket.colorVar }}
+   551→                          />
+   552→                        </div>
+   553→                        <span
+   554→                          className="font-bold text-xs tabular-nums"
+   555→                          style={{ color: bucket.colorVar }}
+   556→                        >
+   557→                          {sc.score}
+   558→                        </span>
+   559→                      </div>
+   560→                    </TableCell>
+   561→
+   562→                    {/* Priority cell */}
+   563→                    <TableCell className="text-center">
+   564→                      <div className="flex items-center justify-center gap-1">
+   565→                        {selected && (
+   566→                          <ArrowUp
+   567→                            className="size-3 text-app-primary"
+   568→                            aria-label="مختار"
+   569→                            aria-hidden="true"
+   570→                          />
+   571→                        )}
+   572→                        <span className="font-bold text-app-primary tabular-nums">{sc.priority}</span>
+   573→                      </div>
+   574→                    </TableCell>
+   575→
+   576→                    <TableCell className="text-center text-app-text tabular-nums">{sol.dailyMinutes}</TableCell>
+   577→                  </TableRow>
+   578→
+   579→                  {/* Details row — spans all 10 columns, hidden when collapsed */}
+   580→                  <CollapsibleContent asChild>
+   581→                    <TableRow className="data-[state=closed]:hidden">
+   582→                      <TableCell colSpan={10} className="bg-app-muted/30">
+   583→                        <SolutionDetailPanel
+   584→                          solution={sol}
+   585→                          score={sc}
+   586→                          causes={causes}
+   587→                        />
+   588→                      </TableCell>
+   589→                    </TableRow>
+   590→                  </CollapsibleContent>
+   591→                </tbody>
+   592→              </Collapsible>
+   593→            );
+   594→          })}
+   595→        </TableBody>
+   596→      </Table>
+   597→    </div>
+   598→  );
+   599→}
+   600→
+   601→// ============================================================
+   602→// Solution detail panel (reusable expansion content)
+   603→// Shown inside both the desktop table details row and the mobile card.
+   604→// ============================================================
+   605→function SolutionDetailPanel({
+   606→  solution,
+   607→  score,
+   608→  causes,
+   609→}: {
+   610→  solution: Solution;
+   611→  score: SolutionScore;
+   612→  causes: { id: string; label_ar: string }[];
+   613→}) {
+   614→  // Lookup cause labels from content.causes
+   615→  const causeLabels: string[] = score.causeIds.map((id) => {
+   616→    const c = causes.find((cc) => cc.id === id);
+   617→    return c?.label_ar ?? id;
+   618→  });
+   619→
+   620→  // Scenarios preview — truncate expected_ar to ~80 chars
+   621→  const expected = solution.scenarios?.expected_ar ?? "";
+   622→  const truncated =
+   623→    expected.length > 80 ? `${expected.slice(0, 80).trimEnd()}…` : expected;
+   624→
+   625→  // First step + remaining count
+   626→  const firstStep = solution.steps_ar?.[0] ?? "";
+   627→  const remainingSteps = Math.max(0, (solution.steps_ar?.length ?? 0) - 1);
+   628→
+   629→  return (
+   630→    <motion.div
+   631→      initial={{ opacity: 0 }}
+   632→      animate={{ opacity: 1 }}
+   633→      transition={{ duration: 0.2 }}
+   634→      className="flex flex-col gap-3 py-3"
+   635→    >
+   636→      {/* CauseIds row */}
+   637→      <div className="flex flex-wrap items-center gap-1.5">
+   638→        <span className="text-[10px] font-semibold text-app-secondary uppercase tracking-wider">
+   639→          الأسباب:
+   640→        </span>
+   641→        {causeLabels.map((label, i) => (
+   642→          <Badge
+   643→            key={`${label}-${i}`}
+   644→            variant="outline"
+   645→            className="text-app-primary border-app-primary/30 bg-app-primary/5 gap-1"
+   646→          >
+   647→            <ListTree className="size-2.5" aria-hidden="true" />
+   648→            {label}
+   649→          </Badge>
+   650→        ))}
+   651→      </div>
+   652→
+   653→      {/* Scenarios preview */}
+   654→      {truncated && (
+   655→        <div className="flex flex-col gap-1">
+   656→          <span className="text-[10px] font-semibold text-app-secondary uppercase tracking-wider">
+   657→            السيناريو المتوقع:
+   658→          </span>
+   659→          <p className="text-xs text-app-text leading-relaxed">{truncated}</p>
+   660→          <p className="text-[10px] text-app-secondary/70 flex items-center gap-1">
+   661→            <ChevronLeft className="size-2.5" aria-hidden="true" />
+   662→            اعرض كل السيناريوهات في الصفحة التالية
+   663→          </p>
+   664→        </div>
+   665→      )}
+   666→
+   667→      {/* First step */}
+   668→      {firstStep && (
+   669→        <div className="flex flex-col gap-1">
+   670→          <span className="text-[10px] font-semibold text-app-secondary uppercase tracking-wider">
+   671→            أول خطوة:
+   672→          </span>
+   673→          <p className="text-xs text-app-text leading-relaxed ps-3 border-s-2 border-app-primary/40">
+   674→            {firstStep}
+   675→          </p>
+   676→          {remainingSteps > 0 && (
+   677→            <Badge
+   678→              variant="outline"
+   679→              className="self-start text-app-secondary border-app-secondary/30 bg-app-muted/40 mt-1"
+   680→            >
+   681→              + {remainingSteps} خطوات تانية
+   682→            </Badge>
+   683→          )}
+   684→        </div>
+   685→      )}
+   686→
+   687→      {/* Success metric in a small green-accent card */}
+   688→      {solution.successMetric_ar && (
+   689→        <div className="bg-app-success/10 border border-app-success/30 rounded-lg p-2.5 flex items-start gap-2">
+   690→          <Check className="size-3.5 text-app-success shrink-0 mt-0.5" aria-hidden="true" />
+   691→          <div className="flex flex-col gap-0.5">
+   692→            <span className="text-[10px] font-semibold text-app-success uppercase tracking-wider">
+   693→              مؤشر النجاح:
+   694→            </span>
+   695→            <p className="text-xs text-app-text leading-relaxed">
+   696→              {solution.successMetric_ar}
+   697→            </p>
+   698→          </div>
+   699→        </div>
+   700→      )}
+   701→    </motion.div>
+   702→  );
+   703→}
+   704→
+   705→// ============================================================
+   706→// Mobile solution card (also used on narrow desktop viewports)
+   707→// ============================================================
+   708→function SolutionCard({
+   709→  solution,
+   710→  score,
+   711→  selected,
+   712→  maxSelected,
+   713→  isTop,
+   714→  onToggle,
+   715→  causes,
+   716→  expanded,
+   717→  onToggleExpand,
+   718→}: {
+   719→  solution: Solution;
+   720→  score: SolutionScore;
+   721→  selected: boolean;
+   722→  maxSelected: boolean;
+   723→  isTop: boolean;
+   724→  onToggle: () => void;
+   725→  causes: { id: string; label_ar: string }[];
+   726→  expanded: boolean;
+   727→  onToggleExpand: () => void;
+   728→}) {
+   729→  const bucket = scoreBucket(score.score);
+   730→
+   731→  return (
+   732→    <motion.div
+   733→      initial={{ opacity: 0, y: 8 }}
+   734→      animate={{ opacity: 1, y: 0 }}
+   735→      className={cn(
+   736→        "relative rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all",
+   737→        selected
+   738→          ? "border-app-primary bg-app-primary/5 shadow-sm"
+   739→          : "border-border bg-card hover:border-app-primary/40",
+   740→        isTop && "border-amber-400/70 ring-1 ring-amber-400/30 shadow-amber-400/10 shadow-md",
+   741→        maxSelected && "opacity-60",
+   742→      )}
+   743→    >
+   744→      {/* "الأفضل لك" corner badge for the top solution */}
+   745→      {isTop && (
+   746→        <motion.span
+   747→          initial={{ scale: 0, opacity: 0 }}
+   748→          animate={{ scale: 1, opacity: 1 }}
+   749→          transition={{ type: "spring", stiffness: 400, damping: 14, delay: 0.2 }}
+   750→          className="absolute -top-2.5 -end-2 inline-flex items-center gap-0.5 bg-amber-400 text-amber-950 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm z-10"
+   751→        >
+   752→          <Crown className="size-2.5" aria-hidden="true" />
+   753→          الأفضل لك
+   754→        </motion.span>
+   755→      )}
+   756→
+   757→      {/* Clickable header — toggles selection */}
+   758→      <motion.button
+   759→        type="button"
+   760→        onClick={onToggle}
+   761→        disabled={maxSelected}
+   762→        whileTap={{ scale: 0.99 }}
+   763→        className="text-start flex items-start gap-2.5 w-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/40"
+   764→        aria-pressed={selected}
+   765→        aria-label={`اختيار ${solution.label_ar}`}
+   766→      >
+   767→        <span
+   768→          className={cn(
+   769→            "shrink-0 size-6 rounded-md flex items-center justify-center border-2 transition-colors mt-0.5",
+   770→            selected
+   771→              ? "bg-app-primary border-app-primary text-white"
+   772→              : "border-app-primary/40 text-transparent",
+   773→          )}
+   774→          aria-hidden="true"
+   775→        >
+   776→          {selected && <Check className="size-4" />}
+   777→        </span>
+   778→        <div className="flex-1 min-w-0">
+   779→          <h3 className="text-sm font-bold text-app-text leading-snug">
+   780→            {solution.label_ar}
+   781→          </h3>
+   782→          <p className="text-xs text-app-secondary mt-0.5">
+   783→            السبب: {causeLabelFor(score, causes)}
+   784→          </p>
+   785→        </div>
+   786→        <div className="flex flex-col items-end gap-1 shrink-0">
+   787→          <Badge
+   788→            variant="outline"
+   789→            className="text-app-primary border-app-primary/40 bg-app-primary/5 font-bold"
+   790→          >
+   791→            {selected && <ArrowUp className="size-3" aria-hidden="true" />}
+   792→            {score.priority}
+   793→          </Badge>
+   794→          <span className="text-[10px] text-app-secondary">أولوية</span>
+   795→        </div>
+   796→      </motion.button>
+   797→
+   798→      {/* Ratings grid */}
+   799→      <div className="grid grid-cols-4 gap-2 text-center">
+   800→        <Rating label="الفاعلية" value={score.E} />
+   801→        <Rating label="السهولة" value={score.A} />
+   802→        <Rating label="السرعة" value={score.S} />
+   803→        <Rating label="الملاءمة" value={score.fit} />
+   804→      </div>
+   805→
+   806→      {/* Score bar */}
+   807→      <div className="flex items-center gap-2">
+   808→        <div
+   809→          className="flex-1 rounded-full overflow-hidden h-2"
+   810→          style={{ backgroundColor: "var(--app-muted)" }}
+   811→        >
+   812→          <div
+   813→            className="h-full rounded-full"
+   814→            style={{ width: `${score.score}%`, backgroundColor: bucket.colorVar }}
+   815→          />
+   816→        </div>
+   817→        <span
+   818→          className="text-xs font-bold tabular-nums shrink-0 px-1.5 py-0.5 rounded"
+   819→          style={{ color: bucket.colorVar, backgroundColor: `${bucket.colorVar}22` }}
+   820→        >
+   821→          {score.score}%
+   822→        </span>
+   823→      </div>
+   824→
+   825→      {/* Footer info */}
+   826→      <div className="flex items-center justify-between text-xs text-app-secondary">
+   827→        <span>يحتاج {solution.dailyMinutes} دقيقة/يوم</span>
+   828→        {selected && (
+   829→          <span className="text-app-primary font-semibold">مختار</span>
+   830→        )}
+   831→        {maxSelected && (
+   832→          <span className="text-app-secondary">وصلت للحد ({MAX_SELECTED})</span>
+   833→        )}
+   834→      </div>
+   835→
+   836→      {/* Details expandable section */}
+   837→      <Collapsible open={expanded} onOpenChange={onToggleExpand}>
+   838→        <div className="flex items-center justify-between pt-1 border-t border-app-primary/10">
+   839→          <CollapsibleTrigger asChild>
+   840→            <Button
+   841→              type="button"
+   842→              variant="ghost"
+   843→              size="sm"
+   844→              className="touch-target text-xs text-app-primary hover:text-app-primary hover:bg-app-primary/5 self-start h-8 px-2"
+   845→              aria-label="تفاصيل الحل"
+   846→              aria-expanded={expanded}
+   847→            >
+   848→              <ChevronDown
+   849→                className={cn(
+   850→                  "size-4 transition-transform duration-200",
+   851→                  expanded && "rotate-180",
+   852→                )}
+   853→                aria-hidden="true"
+   854→              />
+   855→              تفاصيل
+   856→            </Button>
+   857→          </CollapsibleTrigger>
+   858→          {solution.dailyMinutes === 0 && (
+   859→            <span className="text-[10px] text-app-secondary">
+   860→              مفيش وقت يومي مطلوب
+   861→            </span>
+   862→          )}
+   863→        </div>
+   864→
+   865→        <CollapsibleContent>
+   866→          <div className="pt-2">
+   867→            <SolutionDetailPanel solution={solution} score={score} causes={causes} />
+   868→          </div>
+   869→        </CollapsibleContent>
+   870→      </Collapsible>
+   871→    </motion.div>
+   872→  );
+   873→}
+   874→
+   875→function Rating({ label, value }: { label: string; value: number }) {
+   876→  return (
+   877→    <div className="flex flex-col items-center gap-0.5">
+   878→      <span className="text-[10px] text-app-secondary">{label}</span>
+   879→      <span className="text-xs font-bold text-app-text tabular-nums">{value}/5</span>
+   880→    </div>
+   881→  );
+   882→}
+   883→
+   884→// ============================================================
+   885→// Side-by-side comparison dialog
+   886→// Lets the user pick exactly 2 solutions and see them compared
+   887→// across all criteria with star ratings, winner highlights, and
+   888→// a profile-based "which is better for me?" insight.
+   889→// ============================================================
+   890→
+   891→function truncateLabel(s: string, max = 36): string {
+   892→  if (s.length <= max) return s;
+   893→  return `${s.slice(0, max).trimEnd()}…`;
+   894→}
+   895→
+   896→/** Picks the winner side based on which value is "better". Returns null on ties. */
+   897→function pickWinner(
+   898→  a: number,
+   899→  b: number,
+   900→  mode: "higher" | "lower",
+   901→): "left" | "right" | null {
+   902→  if (a === b) return null;
+   903→  if (mode === "higher") return a > b ? "left" : "right";
+   904→  return a < b ? "left" : "right";
+   905→}
+   906→
+   907→/** Star rating row — filled stars for `value`, empty for the rest (out of `max`). */
+   908→function StarRating({ value, max = 5 }: { value: number; max?: number }) {
+   909→  return (
+   910→    <span
+   911→      className="inline-flex items-center gap-1.5"
+   912→      aria-label={`${value} من ${max} نجوم`}
+   913→      role="img"
+   914→    >
+   915→      <span className="inline-flex items-center gap-0.5" aria-hidden="true">
+   916→        {Array.from({ length: max }, (_, i) => (
+   917→          <Star
+   918→            key={i}
+   919→            className={cn(
+   920→              "size-3 sm:size-3.5 transition-colors",
+   921→              i < value
+   922→                ? "fill-amber-400 text-amber-400"
+   923→                : "fill-transparent text-app-secondary/40",
+   924→            )}
+   925→          />
+   926→        ))}
+   927→      </span>
+   928→      <span className="text-xs font-bold text-app-text tabular-nums">
+   929→        {value}/{max}
+   930→      </span>
+   931→    </span>
+   932→  );
+   933→}
+   934→
+   935→/** Dropdown picker for choosing one of the available solutions. */
+   936→function SolutionPicker({
+   937→  value,
+   938→  onChange,
+   939→  scores,
+   940→  solutions,
+   941→  excludeId,
+   942→  label,
+   943→}: {
+   944→  value: string;
+   945→  onChange: (id: string) => void;
+   946→  scores: SolutionScore[];
+   947→  solutions: Solution[];
+   948→  excludeId: string;
+   949→  label: string;
+   950→}) {
+   951→  return (
+   952→    <div className="flex flex-col gap-1.5">
+   953→      <Label className="text-xs font-semibold text-app-secondary flex items-center gap-1">
+   954→        <span
+   955→          className="size-4 rounded-full bg-app-primary/10 text-app-primary inline-flex items-center justify-center text-[10px] font-bold"
+   956→          aria-hidden="true"
+   957→        >
+   958→          {label === "الحل الأول" ? "١" : "٢"}
+   959→        </span>
+   960→        {label}
+   961→      </Label>
+   962→      <Select value={value} onValueChange={onChange}>
+   963→        <SelectTrigger className="w-full h-auto min-h-11 py-2 ps-3 pe-8 text-start">
+   964→          <SelectValue placeholder="اختار حل..." />
+   965→        </SelectTrigger>
+   966→        <SelectContent>
+   967→          {scores.map((sc) => {
+   968→            const sol = solutions.find((s) => s.id === sc.solutionId);
+   969→            if (!sol) return null;
+   970→            const disabled = sc.solutionId === excludeId;
+   971→            return (
+   972→              <SelectItem
+   973→                key={sc.solutionId}
+   974→                value={sc.solutionId}
+   975→                disabled={disabled}
+   976→              >
+   977→                <span className="line-clamp-1">{truncateLabel(sol.label_ar)}</span>
+   978→                <span className="text-app-secondary tabular-nums shrink-0">
+   979→                  — {sc.score}
+   980→                </span>
+   981→              </SelectItem>
+   982→            );
+   983→          })}
+   984→        </SelectContent>
+   985→      </Select>
+   986→    </div>
+   987→  );
+   988→}
+   989→
+   990→type Winner = "left" | "right" | null;
+   991→
+   992→interface ComparisonRow {
+   993→  label: string;
+   994→  left: React.ReactNode;
+   995→  right: React.ReactNode;
+   996→  winner: Winner;
+   997→}
+   998→
+   999→/** 3-column comparison table: criterion | solution A | solution B. */
+  1000→function SideBySideComparisonTable({
+  1001→  leftSol,
+  1002→  rightSol,
+  1003→  leftScore,
+  1004→  rightScore,
+  1005→  causes,
+  1006→}: {
+  1007→  leftSol: Solution;
+  1008→  rightSol: Solution;
+  1009→  leftScore: SolutionScore;
+  1010→  rightScore: SolutionScore;
+  1011→  causes: { id: string; label_ar: string }[];
+  1012→}) {
+  1013→  const rows: ComparisonRow[] = [
+  1014→    {
+  1015→      label: "الفاعلية",
+  1016→      left: <StarRating value={leftScore.E} />,
+  1017→      right: <StarRating value={rightScore.E} />,
+  1018→      winner: pickWinner(leftScore.E, rightScore.E, "higher"),
+  1019→    },
+  1020→    {
+  1021→      label: "السهولة",
+  1022→      left: <StarRating value={leftScore.A} />,
+  1023→      right: <StarRating value={rightScore.A} />,
+  1024→      winner: pickWinner(leftScore.A, rightScore.A, "higher"),
+  1025→    },
+  1026→    {
+  1027→      label: "السرعة",
+  1028→      left: <StarRating value={leftScore.S} />,
+  1029→      right: <StarRating value={rightScore.S} />,
+  1030→      winner: pickWinner(leftScore.S, rightScore.S, "higher"),
+  1031→    },
+  1032→    {
+  1033→      label: "الملاءمة",
+  1034→      left: <StarRating value={leftScore.fit} />,
+  1035→      right: <StarRating value={rightScore.fit} />,
+  1036→      winner: pickWinner(leftScore.fit, rightScore.fit, "higher"),
+  1037→    },
+  1038→    {
+  1039→      label: "الدرجة",
+  1040→      left: (
+  1041→        <span className="font-bold text-app-text tabular-nums text-sm">
+  1042→          {leftScore.score}
+  1043→        </span>
+  1044→      ),
+  1045→      right: (
+  1046→        <span className="font-bold text-app-text tabular-nums text-sm">
+  1047→          {rightScore.score}
+  1048→        </span>
+  1049→      ),
+  1050→      winner: pickWinner(leftScore.score, rightScore.score, "higher"),
+  1051→    },
+  1052→    {
+  1053→      label: "الأولوية",
+  1054→      left: (
+  1055→        <span className="font-bold text-app-primary tabular-nums text-sm">
+  1056→          {leftScore.priority}
+  1057→        </span>
+  1058→      ),
+  1059→      right: (
+  1060→        <span className="font-bold text-app-primary tabular-nums text-sm">
+  1061→          {rightScore.priority}
+  1062→        </span>
+  1063→      ),
+  1064→      winner: pickWinner(leftScore.priority, rightScore.priority, "higher"),
+  1065→    },
+  1066→    {
+  1067→      label: "دقيقة/يوم",
+  1068→      left: (
+  1069→        <span className="text-app-text tabular-nums text-sm">
+  1070→          {leftSol.dailyMinutes === 0 ? "—" : leftSol.dailyMinutes}
+  1071→        </span>
+  1072→      ),
+  1073→      right: (
+  1074→        <span className="text-app-text tabular-nums text-sm">
+  1075→          {rightSol.dailyMinutes === 0 ? "—" : rightSol.dailyMinutes}
+  1076→        </span>
+  1077→      ),
+  1078→      winner: pickWinner(leftSol.dailyMinutes, rightSol.dailyMinutes, "lower"),
+  1079→    },
+  1080→    {
+  1081→      label: "السبب",
+  1082→      left: (
+  1083→        <span className="text-xs text-app-text leading-snug">
+  1084→          {causeLabelFor(leftScore, causes)}
+  1085→        </span>
+  1086→      ),
+  1087→      right: (
+  1088→        <span className="text-xs text-app-text leading-snug">
+  1089→          {causeLabelFor(rightScore, causes)}
+  1090→        </span>
+  1091→      ),
+  1092→      winner: null,
+  1093→    },
+  1094→    {
+  1095→      label: "يحتاج فريق؟",
+  1096→      left: (
+  1097→        <span
+  1098→          className={cn(
+  1099→            "text-sm font-semibold",
+  1100→            leftSol.needsTeam ? "text-app-secondary" : "text-app-success",
+  1101→          )}
+  1102→        >
+  1103→          {leftSol.needsTeam ? "آه" : "لأ"}
+  1104→        </span>
+  1105→      ),
+  1106→      right: (
+  1107→        <span
+  1108→          className={cn(
+  1109→            "text-sm font-semibold",
+  1110→            rightSol.needsTeam ? "text-app-secondary" : "text-app-success",
+  1111→          )}
+  1112→        >
+  1113→          {rightSol.needsTeam ? "آه" : "لأ"}
+  1114→        </span>
+  1115→      ),
+  1116→      winner: null,
+  1117→    },
+  1118→  ];
+  1119→
+  1120→  return (
+  1121→    <div className="rounded-xl border border-border overflow-hidden bg-card">
+  1122→      <Table>
+  1123→        <TableHeader>
+  1124→          <TableRow className="bg-app-muted/60 hover:bg-app-muted/60">
+  1125→            <TableHead className="text-xs font-semibold text-app-secondary py-2.5 w-1/3">
+  1126→              المعيار
+  1127→            </TableHead>
+  1128→            <TableHead className="text-xs font-semibold text-app-secondary text-center py-2.5">
+  1129→              الحل الأول
+  1130→            </TableHead>
+  1131→            <TableHead className="text-xs font-semibold text-app-secondary text-center py-2.5">
+  1132→              الحل الثاني
+  1133→            </TableHead>
+  1134→          </TableRow>
+  1135→        </TableHeader>
+  1136→        <TableBody>
+  1137→          {rows.map((row, i) => (
+  1138→            <TableRow
+  1139→              key={i}
+  1140→              className={cn(
+  1141→                "border-border",
+  1142→                i % 2 === 1 && "bg-app-muted/20",
+  1143→              )}
+  1144→            >
+  1145→              <TableCell className="text-xs font-medium text-app-secondary py-2.5 align-middle">
+  1146→                {row.label}
+  1147→              </TableCell>
+  1148→              <TableCell
+  1149→                className={cn(
+  1150→                  "text-center py-2.5 align-middle",
+  1151→                  row.winner === "left" &&
+  1152→                    "bg-app-success/15 border-start-2 border-app-success",
+  1153→                )}
+  1154→              >
+  1155→                {row.left}
+  1156→              </TableCell>
+  1157→              <TableCell
+  1158→                className={cn(
+  1159→                  "text-center py-2.5 align-middle",
+  1160→                  row.winner === "right" &&
+  1161→                    "bg-app-success/15 border-start-2 border-app-success",
+  1162→                )}
+  1163→              >
+  1164→                {row.right}
+  1165→              </TableCell>
+  1166→            </TableRow>
+  1167→          ))}
+  1168→        </TableBody>
+  1169→      </Table>
+  1170→    </div>
+  1171→  );
+  1172→}
+  1173→
+  1174→/** Compact scenario card showing the "expected" scenario for one solution. */
+  1175→function ScenarioCard({
+  1176→  sol,
+  1177→  title,
+  1178→}: {
+  1179→  sol: Solution;
+  1180→  title: string;
+  1181→}) {
+  1182→  return (
+  1183→    <div className="rounded-lg border border-border bg-card p-3 flex flex-col gap-1.5">
+  1184→      <span className="text-[10px] font-semibold text-app-secondary uppercase tracking-wider">
+  1185→        {title}
+  1186→      </span>
+  1187→      <p className="text-xs text-app-text leading-relaxed line-clamp-4">
+  1188→        {sol.scenarios?.expected_ar ?? "—"}
+  1189→      </p>
+  1190→    </div>
+  1191→  );
+  1192→}
+  1193→
+  1194→/**
+  1195→ * Analyzes the two solutions against the user's profile and produces
+  1196→ * the most relevant "which is better for me?" insight.
+  1197→ *
+  1198→ * Priority:
+  1199→ * 1. If scores within 5 points → "try both"
+  1200→ * 2. If one has higher fit → "X أنسب لملاءمتك"
+  1201→ * 3. If urgent + one is faster → "X أسرع ومناسب لقرب الامتحان"
+  1202→ * 4. If limited time + one needs less daily time → "X يحتاج وقت أقل يومياً"
+  1203→ * 5. Default: higher score wins
+  1204→ */
+  1205→function analyzeFit(
+  1206→  leftSol: Solution,
+  1207→  rightSol: Solution,
+  1208→  leftScore: SolutionScore,
+  1209→  rightScore: SolutionScore,
+  1210→  profile: Profile | null,
+  1211→): string {
+  1212→  const scoreDiff = Math.abs(leftScore.score - rightScore.score);
+  1213→
+  1214→  // 1. Very close scores → recommend trying both
+  1215→  if (scoreDiff <= 5) {
+  1216→    return "الحلين متقاربين جداً — جرّب الاتنين وشوف إيه اللي يناسبك أكتر.";
+  1217→  }
+  1218→
+  1219→  // 2. Higher fit → recommend that one
+  1220→  if (leftScore.fit !== rightScore.fit) {
+  1221→    const fitWinner = leftScore.fit > rightScore.fit ? "الحل الأول" : "الحل الثاني";
+  1222→    return `${fitWinner} أنسب لملاءمتك (وقتك/فريقك).`;
+  1223→  }
+  1224→
+  1225→  // 3. Urgent + speed difference
+  1226→  if (profile?.urgent && leftScore.S !== rightScore.S) {
+  1227→    const faster = leftScore.S > rightScore.S ? "الحل الأول" : "الحل الثاني";
+  1228→    return `${faster} أسرع ومناسب لقرب الامتحان.`;
+  1229→  }
+  1230→
+  1231→  // 4. Limited time + daily minutes difference
+  1232→  if (
+  1233→    profile &&
+  1234→    profile.minutesPerDay <= 30 &&
+  1235→    leftSol.dailyMinutes !== rightSol.dailyMinutes
+  1236→  ) {
+  1237→    const lessTime =
+  1238→      leftSol.dailyMinutes < rightSol.dailyMinutes ? "الحل الأول" : "الحل الثاني";
+  1239→    return `${lessTime} يحتاج وقت أقل يومياً.`;
+  1240→  }
+  1241→
+  1242→  // 5. Default: higher score
+  1243→  const better = leftScore.score > rightScore.score ? "الحل الأول" : "الحل الثاني";
+  1244→  const betterScore = leftScore.score > rightScore.score ? leftScore : rightScore;
+  1245→  const worseScore = leftScore.score > rightScore.score ? rightScore : leftScore;
+  1246→  return `${better} درجته أعلى (${betterScore.score} مقابل ${worseScore.score}).`;
+  1247→}
+  1248→
+  1249→function WhichIsBetterCard({
+  1250→  leftSol,
+  1251→  rightSol,
+  1252→  leftScore,
+  1253→  rightScore,
+  1254→  profile,
+  1255→}: {
+  1256→  leftSol: Solution;
+  1257→  rightSol: Solution;
+  1258→  leftScore: SolutionScore;
+  1259→  rightScore: SolutionScore;
+  1260→  profile: Profile | null;
+  1261→}) {
+  1262→  const insight = analyzeFit(leftSol, rightSol, leftScore, rightScore, profile);
+  1263→
+  1264→  return (
+  1265→    <div className="bg-app-accent/15 border border-app-accent/40 rounded-xl p-4 flex flex-col gap-2">
+  1266→      <h3 className="text-sm font-semibold text-app-text flex items-center gap-2">
+  1267→        <Lightbulb
+  1268→          className="size-4 text-app-primary shrink-0"
+  1269→          aria-hidden="true"
+  1270→        />
+  1271→        أيهما أنسب لي؟
+  1272→      </h3>
+  1273→      <p className="text-sm text-app-text leading-relaxed">{insight}</p>
+  1274→    </div>
+  1275→  );
+  1276→}
+  1277→
+  1278→function SolutionComparisonDialog({
+  1279→  open,
+  1280→  onOpenChange,
+  1281→  scores,
+  1282→  solutions,
+  1283→  causes,
+  1284→  profile,
+  1285→  onGoToScenarios,
+  1286→}: {
+  1287→  open: boolean;
+  1288→  onOpenChange: (open: boolean) => void;
+  1289→  scores: SolutionScore[];
+  1290→  solutions: Solution[];
+  1291→  causes: { id: string; label_ar: string }[];
+  1292→  profile: Profile | null;
+  1293→  onGoToScenarios: () => void;
+  1294→}) {
+  1295→  // Picker state — defaults are set when the dialog opens
+  1296→  const [leftId, setLeftId] = React.useState<string>("");
+  1297→  const [rightId, setRightId] = React.useState<string>("");
+  1298→
+  1299→  // Reset to the first two solutions each time the dialog opens
+  1300→  const wasOpenRef = React.useRef(false);
+  1301→  React.useEffect(() => {
+  1302→    if (open && !wasOpenRef.current && scores.length >= 2) {
+  1303→      setLeftId(scores[0].solutionId);
+  1304→      setRightId(scores[1].solutionId);
+  1305→    }
+  1306→    wasOpenRef.current = open;
+  1307→  }, [open, scores]);
+  1308→
+  1309→  // Defensive: ensure IDs are valid and different
+  1310→  const safeLeftId = scores.find((s) => s.solutionId === leftId)
+  1311→    ? leftId
+  1312→    : (scores[0]?.solutionId ?? "");
+  1313→  const safeRightId =
+  1314→    scores.find((s) => s.solutionId === rightId) && rightId !== safeLeftId
+  1315→      ? rightId
+  1316→      : (scores.find((s) => s.solutionId !== safeLeftId)?.solutionId ?? "");
+  1317→
+  1318→  const leftScore = scores.find((s) => s.solutionId === safeLeftId);
+  1319→  const rightScore = scores.find((s) => s.solutionId === safeRightId);
+  1320→  const leftSol = solutions.find((s) => s.id === safeLeftId);
+  1321→  const rightSol = solutions.find((s) => s.id === safeRightId);
+  1322→
+  1323→  // Defensive fallback when there aren't two solutions to compare
+  1324→  if (!leftScore || !rightScore || !leftSol || !rightSol) {
+  1325→    return (
+  1326→      <Dialog open={open} onOpenChange={onOpenChange}>
+  1327→        <DialogContent className="sm:max-w-lg">
+  1328→          <DialogHeader>
+  1329→            <DialogTitle className="flex items-center gap-2">
+  1330→              <GitCompare
+  1331→                className="size-5 text-app-primary"
+  1332→                aria-hidden="true"
+  1333→              />
+  1334→              مقارنة حلوين
+  1335→            </DialogTitle>
+  1336→          </DialogHeader>
+  1337→          <p className="text-sm text-app-secondary">
+  1338→            محتاج حلّين على الأقل عشان نقارنهم. خلّص الأسئلة الأول.
+  1339→          </p>
+  1340→        </DialogContent>
+  1341→      </Dialog>
+  1342→    );
+  1343→  }
+  1344→
+  1345→  return (
+  1346→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1347→      <DialogContent className="sm:max-w-3xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
+  1348→        <DialogHeader>
+  1349→          <DialogTitle className="flex items-center gap-2 text-lg">
+  1350→            <GitCompare
+  1351→              className="size-5 text-app-primary shrink-0"
+  1352→              aria-hidden="true"
+  1353→            />
+  1354→            مقارنة حلوين
+  1355→          </DialogTitle>
+  1356→          <p className="text-xs text-app-secondary leading-relaxed">
+  1357→            اختار حلّين وقارنهم على كل المعايير — الخلية الخضراء هي الأحسن في كل صف.
+  1358→          </p>
+  1359→        </DialogHeader>
+  1360→
+  1361→        {/* Solution pickers */}
+  1362→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1363→          <SolutionPicker
+  1364→            value={safeLeftId}
+  1365→            onChange={setLeftId}
+  1366→            scores={scores}
+  1367→            solutions={solutions}
+  1368→            excludeId={safeRightId}
+  1369→            label="الحل الأول"
+  1370→          />
+  1371→          <SolutionPicker
+  1372→            value={safeRightId}
+  1373→            onChange={setRightId}
+  1374→            scores={scores}
+  1375→            solutions={solutions}
+  1376→            excludeId={safeLeftId}
+  1377→            label="الحل الثاني"
+  1378→          />
+  1379→        </div>
+  1380→
+  1381→        {/* Comparison table */}
+  1382→        <SideBySideComparisonTable
+  1383→          leftSol={leftSol}
+  1384→          rightSol={rightSol}
+  1385→          leftScore={leftScore}
+  1386→          rightScore={rightScore}
+  1387→          causes={causes}
+  1388→        />
+  1389→
+  1390→        {/* Scenarios section */}
+  1391→        <div className="flex flex-col gap-2">
+  1392→          <h3 className="text-sm font-semibold text-app-text flex items-center gap-1.5">
+  1393→            <ListTree
+  1394→              className="size-4 text-app-primary shrink-0"
+  1395→              aria-hidden="true"
+  1396→            />
+  1397→            السيناريوهات
+  1398→          </h3>
+  1399→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1400→            <ScenarioCard sol={leftSol} title="الحل الأول" />
+  1401→            <ScenarioCard sol={rightSol} title="الحل الثاني" />
+  1402→          </div>
+  1403→          <button
+  1404→            type="button"
+  1405→            onClick={() => {
+  1406→              onOpenChange(false);
+  1407→              onGoToScenarios();
+  1408→            }}
+  1409→            className="text-xs text-app-primary hover:text-app-primary/80 hover:underline self-start flex items-center gap-1 mt-1 ps-1"
+  1410→          >
+  1411→            <ChevronLeft className="size-3.5" aria-hidden="true" />
+  1412→            اعرض كل السيناريوهات
+  1413→          </button>
+  1414→        </div>
+  1415→
+  1416→        {/* Which is better for me? */}
+  1417→        <WhichIsBetterCard
+  1418→          leftSol={leftSol}
+  1419→          rightSol={rightSol}
+  1420→          leftScore={leftScore}
+  1421→          rightScore={rightScore}
+  1422→          profile={profile}
+  1423→        />
+  1424→
+  1425→        {/* Close button */}
+  1426→        <DialogFooter className="sm:justify-center pt-1">
+  1427→          <Button
+  1428→            type="button"
+  1429→            className="bg-app-primary text-white hover:bg-app-primary/90 h-11 px-6 w-full sm:w-auto"
+  1430→            onClick={() => onOpenChange(false)}
+  1431→          >
+  1432→            تمام، فهمت
+  1433→          </Button>
+  1434→        </DialogFooter>
+  1435→      </DialogContent>
+  1436→    </Dialog>
+  1437→  );
+  1438→}
+  1439→

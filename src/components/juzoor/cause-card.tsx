@@ -135,10 +135,10 @@ export function CauseCard({ cause, score, rank, onOpenWhy }: CauseCardProps) {
           : { y: -2, transition: { duration: 0.15, ease: "easeOut" } }
       }
       className={cn(
-        "bg-card rounded-2xl border shadow-sm p-5 flex flex-col gap-4 relative",
+        "rounded-2xl border p-5 flex flex-col gap-4 relative",
         isTop
-          ? "border-amber-400/60 shadow-amber-400/20 shadow-md"
-          : "border-border",
+          ? "bg-card-gradient-accent border-amber-400/60 shadow-card-hover"
+          : "bg-card-gradient border-border shadow-card-soft",
       )}
     >
       {isTop && (

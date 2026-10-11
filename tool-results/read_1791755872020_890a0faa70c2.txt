@@ -1,0 +1,698 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import * as React from "react";
+     4→     4→import { motion, AnimatePresence } from "framer-motion";
+     5→     5→import {
+     6→     6→  Download,
+     7→     7→  Printer,
+     8→     8→  Save,
+     9→     9→  Calendar,
+    10→    10→  Target,
+    11→    11→  ChevronLeft,
+    12→    12→  RefreshCw,
+    13→    13→  Check,
+    14→    14→  Sparkles,
+    15→    15→  Share2,
+    16→    16→  TrendingUp,
+    17→    17→  Flame,
+    18→    18→  BellRing,
+    19→    19→} from "lucide-react";
+    20→    20→import { useJuzoor } from "@/lib/store";
+    21→    21→import { toast } from "sonner";
+    22→    22→import { loadMessages } from "@/lib/content";
+    23→    23→import { Button } from "@/components/ui/button";
+    24→    24→import { Card } from "@/components/ui/card";
+    25→    25→import { Checkbox } from "@/components/ui/checkbox";
+    26→    26→import { Progress } from "@/components/ui/progress";
+    27→    27→import { CelebrationBurst } from "./celebration-burst";
+    28→    28→import type { Solution } from "@/lib/engine/types";
+    29→    29→
+    30→    30→export function PlanScreen() {
+    31→    31→  const content = useJuzoor((s) => s.content);
+    32→    32→  const selectedSolutionIds = useJuzoor((s) => s.selectedSolutionIds);
+    33→    33→  const planId = useJuzoor((s) => s.planId);
+    34→    34→  const planSavedAt = useJuzoor((s) => s.planSavedAt);
+    35→    35→  const planReviewDate = useJuzoor((s) => s.planReviewDate);
+    36→    36→  const participantCode = useJuzoor((s) => s.participantCode);
+    37→    37→  const causeScores = useJuzoor((s) => s.causeScores);
+    38→    38→  const symptomId = useJuzoor((s) => s.engine.symptomId);
+    39→    39→  const savePlan = useJuzoor((s) => s.savePlan);
+    40→    40→  const exportPlan = useJuzoor((s) => s.exportPlan);
+    41→    41→  const dayCheckins = useJuzoor((s) => s.dayCheckins);
+    42→    42→
+    43→    43→  // Celebration state: a token that increments each time the user saves,
+    44→    44→  // plus the anchor (viewport coords) where the confetti should burst from.
+    45→    45→  // Declared BEFORE the early return to keep hook order stable.
+    46→    46→  const [celebrationToken, setCelebrationToken] = React.useState(0);
+    47→    47→  const [celebrationAnchor, setCelebrationAnchor] = React.useState<{
+    48→    48→    x: number;
+    49→    49→    y: number;
+    50→    50→  } | null>(null);
+    51→    51→
+    52→    52→  if (!content) return null;
+    53→    53→
+    54→    54→  const messages = loadMessages();
+    55→    55→
+    56→    56→  const selectedSolutions: Solution[] = selectedSolutionIds
+    57→    57→    .map((id) => content.solutions.find((s) => s.id === id))
+    58→    58→    .filter((s): s is Solution => Boolean(s));
+    59→    59→
+    60→    60→  const handleSave: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    61→    61→    const btn = event.currentTarget;
+    62→    62→    const rect = btn.getBoundingClientRect();
+    63→    63→    setCelebrationAnchor({
+    64→    64→      x: rect.left + rect.width / 2,
+    65→    65→      y: rect.top + rect.height / 2,
+    66→    66→    });
+    67→    67→    setCelebrationToken((n) => n + 1);
+    68→    68→    savePlan();
+    69→    69→    toast.success("تم الحفظ", {
+    70→    70→      description: `كود الخطة: ${useJuzoor.getState().planId}`,
+    71→    71→    });
+    72→    72→  };
+    73→    73→
+    74→    74→  const handleExportText = () => {
+    75→    75→    const text = buildPlanText(selectedSolutions, {
+    76→    76→      planId,
+    77→    77→      reviewDate: planReviewDate,
+    78→    78→      savedAt: planSavedAt,
+    79→    79→      participantCode,
+    80→    80→    });
+    81→    81→    exportPlan("text");
+    82→    82→    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    83→    83→    const url = URL.createObjectURL(blob);
+    84→    84→    const a = document.createElement("a");
+    85→    85→    a.href = url;
+    86→    86→    a.download = `juzoor-plan-${planId ?? Date.now()}.txt`;
+    87→    87→    document.body.appendChild(a);
+    88→    88→    a.click();
+    89→    89→    document.body.removeChild(a);
+    90→    90→    URL.revokeObjectURL(url);
+    91→    91→    toast.success("تم تصدير الخطة كنص");
+    92→    92→  };
+    93→    93→
+    94→    94→  const handlePrint = () => {
+    95→    95→    exportPlan("pdf");
+    96→    96→    // Give the store a tick to persist the export event before invoking print
+    97→    97→    window.print();
+    98→    98→  };
+    99→    99→
+   100→   100→  const handleShare = async () => {
+   101→   101→    const summary = buildShareSummary(selectedSolutions, {
+   102→   102→      planId,
+   103→   103→      reviewDate: planReviewDate,
+   104→   104→      participantCode,
+   105→   105→      causeScores,
+   106→   106→      content,
+   107→   107→      symptomId,
+   108→   108→    });
+   109→   109→    try {
+   110→   110→      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+   111→   111→        await navigator.clipboard.writeText(summary);
+   112→   112→        toast.success("تم نسخ ملخص الخطة", {
+   113→   113→          description: "تقدر تلصقه في أي مكان — رسالة، بريد، أو ملاحظة",
+   114→   114→        });
+   115→   115→      } else {
+   116→   116→        // Fallback: open a new window with the text
+   117→   117→        const w = window.open("", "_blank");
+   118→   118→        if (w) {
+   119→   119→          w.document.write(`<pre style="font-family: system-ui; white-space: pre-wrap; padding: 1rem; direction: rtl;">${summary.replace(/</g, "&lt;")}</pre>`);
+   120→   120→          w.document.title = "ملخص خطة جذور";
+   121→   121→        }
+   122→   122→      }
+   123→   123→    } catch {
+   124→   124→      toast.error("مش قادرين ننسخ الملخص", {
+   125→   125→        description: "جرّب تصدير الخطة كنص بدلاً من ذلك",
+   126→   126→      });
+   127→   127→    }
+   128→   128→  };
+   129→   129→
+   130→   130→  return (
+   131→   131→    <div className="max-w-md mx-auto px-4 pt-6 pb-12 flex flex-col gap-5 print:max-w-none print:px-8 print:gap-6">
+   132→   132→      {/* On-screen header (hidden when printing) */}
+   133→   133→      <header className="flex flex-col gap-1.5 pt-2 no-print print:hidden">
+   134→   134→        <h1 className="text-2xl font-bold text-app-text leading-snug">خطتك لمدة 7 أيام</h1>
+   135→   135→        <p className="text-sm text-app-secondary leading-relaxed">
+   136→   136→          خطوات صغيرة كل يوم، أكتر من 20 دقيقة للخطوة
+   137→   137→        </p>
+   138→   138→      </header>
+   139→   139→
+   140→   140→      {/* Print-only header block — prominent, with plan IDs */}
+   141→   141→      <div className="hidden print:block border-b-2 border-black pb-3 mb-2">
+   142→   142→        <h1 className="text-2xl font-bold text-black">خطتي على جذور</h1>
+   143→   143→        <p className="text-sm text-black mt-1">خطة 7 أيام — تطبيق جذور | نظّم وقتك، افهم نفسك</p>
+   144→   144→        <div className="grid grid-cols-3 gap-3 mt-3 text-xs text-black">
+   145→   145→          <div>
+   146→   146→            <p className="font-bold">كود المشاركة:</p>
+   147→   147→            <p className="font-mono">{participantCode ?? "—"}</p>
+   148→   148→          </div>
+   149→   149→          <div>
+   150→   150→            <p className="font-bold">كود الخطة:</p>
+   151→   151→            <p className="font-mono">{planId ?? "غير محفوظ"}</p>
+   152→   152→          </div>
+   153→   153→          <div>
+   154→   154→            <p className="font-bold">موعد المراجعة:</p>
+   155→   155→            <p className="font-mono">{planReviewDate ?? "—"}</p>
+   156→   156→          </div>
+   157→   157→        </div>
+   158→   158→        {planSavedAt && (
+   159→   159→          <p className="text-[10px] text-black mt-1">
+   160→   160→            اتحفظت في: {new Date(planSavedAt).toLocaleString("ar-EG")}
+   161→   161→          </p>
+   162→   162→        )}
+   163→   163→      </div>
+   164→   164→
+   165→   165→      {selectedSolutions.length === 0 ? (
+   166→   166→        <Card className="p-4 bg-app-muted text-app-secondary text-sm no-print">
+   167→   167→          مفيش حلول مختارة في الخطة. ارجع لصفحة المقارنة.
+   168→   168→        </Card>
+   169→   169→      ) : (
+   170→   170→        <div className="flex flex-col gap-5 print:gap-4">
+   171→   171→          <PlanProgressCard
+   172→   172→            selectedSolutions={selectedSolutions}
+   173→   173→            selectedSolutionIds={selectedSolutionIds}
+   174→   174→            dayCheckins={dayCheckins}
+   175→   175→            planId={planId}
+   176→   176→          />
+   177→   177→          <DailyReminderCard />
+   178→   178→          {selectedSolutions.map((sol, idx) => (
+   179→   179→            <PlanTimeline key={sol.id} solution={sol} index={idx} />
+   180→   180→          ))}
+   181→   181→        </div>
+   182→   182→      )}
+   183→   183→
+   184→   184→      {/* Review date + save info (visible in print too, simplified styling) */}
+   185→   185→      <div className="flex flex-col gap-3 no-print print:hidden">
+   186→   186→        <Card className="p-4 bg-app-primary/5 border-app-primary/30 flex flex-col gap-3">
+   187→   187→          <div className="flex items-center gap-2 text-sm">
+   188→   188→            <Calendar className="size-4 text-app-primary" aria-hidden="true" />
+   189→   189→            <span className="text-app-secondary">موعد المراجعة:</span>
+   190→   190→            <span className="font-bold text-app-text">بعد أسبوع: {planReviewDate ?? "—"}</span>
+   191→   191→          </div>
+   192→   192→          {planId && planSavedAt && (
+   193→   193→            <div className="flex items-center gap-2 text-xs text-app-secondary">
+   194→   194→              <Save className="size-3.5 text-app-primary" aria-hidden="true" />
+   195→   195→              <span>
+   196→   196→                كود الخطة:{" "}
+   197→   197→                <motion.span
+   198→   198→                  key={`planid-${celebrationToken}`}
+   199→   199→                  initial={{ scale: 1 }}
+   200→   200→                  animate={
+   201→   201→                    celebrationToken > 0
+   202→   202→                      ? { scale: [1, 1.05, 1] }
+   203→   203→                      : { scale: 1 }
+   204→   204→                  }
+   205→   205→                  transition={{ duration: 0.3, ease: "easeOut" }}
+   206→   206→                  className="font-mono font-bold text-app-primary inline-block"
+   207→   207→                >
+   208→   208→                  {planId}
+   209→   209→                </motion.span>{" "}
+   210→   210→                — اتحفظت في {new Date(planSavedAt).toLocaleString("ar-EG")}
+   211→   211→              </span>
+   212→   212→            </div>
+   213→   213→          )}
+   214→   214→        </Card>
+   215→   215→      </div>
+   216→   216→
+   217→   217→      {/* Action buttons (hidden in print) */}
+   218→   218→      <div className="flex flex-col gap-3 no-print print:hidden">
+   219→   219→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   220→   220→          <Button
+   221→   221→            type="button"
+   222→   222→            className="touch-target h-12 bg-app-primary text-white hover:bg-app-primary/90"
+   223→   223→            onClick={handleSave}
+   224→   224→          >
+   225→   225→            <Save className="size-4" aria-hidden="true" />
+   226→   226→            احفظ الخطّة
+   227→   227→          </Button>
+   228→   228→          <Button
+   229→   229→            type="button"
+   230→   230→            variant="outline"
+   231→   231→            className="touch-target h-12 border-app-primary/30 text-app-primary hover:bg-app-primary/5"
+   232→   232→            onClick={handleExportText}
+   233→   233→          >
+   234→   234→            <Download className="size-4" aria-hidden="true" />
+   235→   235→            صدّر كنص
+   236→   236→          </Button>
+   237→   237→        </div>
+   238→   238→        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   239→   239→          <Button
+   240→   240→            type="button"
+   241→   241→            variant="outline"
+   242→   242→            className="touch-target h-12 border-app-accent/50 text-app-primary hover:bg-app-accent/10"
+   243→   243→            onClick={handleShare}
+   244→   244→          >
+   245→   245→            <Share2 className="size-4" aria-hidden="true" />
+   246→   246→            شارك ملخص الخطة
+   247→   247→          </Button>
+   248→   248→          <Button
+   249→   249→            type="button"
+   250→   250→            variant="outline"
+   251→   251→            className="touch-target h-12 border-app-primary/30 text-app-primary hover:bg-app-primary/5"
+   252→   252→            onClick={handlePrint}
+   253→   253→          >
+   254→   254→            <Printer className="size-4" aria-hidden="true" />
+   255→   255→            اطبع / احفظ PDF
+   256→   256→          </Button>
+   257→   257→        </div>
+   258→   258→
+   259→   259→        <Button
+   260→   260→          type="button"
+   261→   261→          variant="ghost"
+   262→   262→          className="touch-target text-app-secondary hover:text-app-primary"
+   263→   263→          onClick={() => useJuzoor.getState().go("followup")}
+   264→   264→        >
+   265→   265→          <RefreshCw className="size-4" aria-hidden="true" />
+   266→   266→          أراجع خطتي بعد أسبوع
+   267→   267→          <ChevronLeft className="size-4" aria-hidden="true" />
+   268→   268→        </Button>
+   269→   269→      </div>
+   270→   270→
+   271→   271→      {/* Celebration burst — confetti from the save button */}
+   272→   272→      <CelebrationBurst token={celebrationToken} anchor={celebrationAnchor} />
+   273→   273→
+   274→   274→      {/* Motivational message after save — green accent card with Sparkles */}
+   275→   275→      <AnimatePresence>
+   276→   276→        {celebrationToken > 0 && messages.plan_saved_celebrate && (
+   277→   277→          <motion.div
+   278→   278→            key={`celebrate-${celebrationToken}`}
+   279→   279→            initial={{ opacity: 0, y: 8 }}
+   280→   280→            animate={{ opacity: 1, y: 0 }}
+   281→   281→            exit={{ opacity: 0, y: -4 }}
+   282→   282→            transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
+   283→   283→            className="bg-app-success/10 border border-app-success/40 rounded-2xl p-4 flex items-start gap-3 no-print print:hidden"
+   284→   284→            role="status"
+   285→   285→          >
+   286→   286→            <Sparkles
+   287→   287→              className="size-5 text-app-success shrink-0 mt-0.5"
+   288→   288→              aria-hidden="true"
+   289→   289→            />
+   290→   290→            <p className="text-sm font-medium text-app-text leading-relaxed">
+   291→   291→              {messages.plan_saved_celebrate}
+   292→   292→            </p>
+   293→   293→          </motion.div>
+   294→   294→        )}
+   295→   295→      </AnimatePresence>
+   296→   296→
+   297→   297→      <p className="text-xs text-app-secondary text-center leading-relaxed no-print print:hidden">
+   298→   298→        القرار النهائي لك — اختر اللي يناسبك وعدّل عليه
+   299→   299→      </p>
+   300→   300→
+   301→   301→      {/* Print-only footer note */}
+   302→   302→      <div className="hidden print:block border-t border-black mt-4 pt-2 text-xs text-black">
+   303→   303→        <p>القرار النهائي لك — اختر اللي يناسبك وعدّل عليه.</p>
+   304→   304→        <p className="mt-1">جذور | نظّم وقتك، افهم نفسك — تطبيق مش بديل عن شخص مختص.</p>
+   305→   305→      </div>
+   306→   306→    </div>
+   307→   307→  );
+   308→   308→}
+   309→   309→
+   310→   310→function PlanTimeline({ solution, index }: { solution: Solution; index: number }) {
+   311→   311→  const steps = solution.steps_ar;
+   312→   312→  // Distribute 7 steps across 7 days. If fewer steps, cycle; if more, use first 7.
+   313→   313→  const days = Array.from({ length: 7 }, (_, i) => steps[i % steps.length] ?? steps[0]);
+   314→   314→  // Persisted check-in state — survives reload, feeds the progress summary card.
+   315→   315→  // Scoped by planId so a new plan starts fresh instead of inheriting old check-ins.
+   316→   316→  const dayCheckins = useJuzoor((s) => s.dayCheckins);
+   317→   317→  const planId = useJuzoor((s) => s.planId);
+   318→   318→  const toggleDayCheckin = useJuzoor((s) => s.toggleDayCheckin);
+   319→   319→  const checkinScope = planId ?? "";
+   320→   320→  const checked = days.map((_, dayIdx) =>
+   321→   321→    Boolean(dayCheckins[`${checkinScope}-${solution.id}-${dayIdx}`]?.completed),
+   322→   322→  );
+   323→   323→  const [justChecked, setJustChecked] = React.useState<number | null>(null);
+   324→   324→  const estMinutes = Math.max(20, solution.dailyMinutes || 20);
+   325→   325→
+   326→   326→  // Detect prefers-reduced-motion for the check overlay
+   327→   327→  const prefersReducedMotion = usePrefersReducedMotion();
+   328→   328→
+   329→   329→  const handleCheck = (dayIdx: number, v: boolean | "indeterminate") => {
+   330→   330→    const next = Boolean(v);
+   331→   331→    // Only fire the celebratory overlay when transitioning to "checked".
+   332→   332→    const wasChecked = checked[dayIdx];
+   333→   333→    toggleDayCheckin(solution.id, dayIdx);
+   334→   334→    if (next && !wasChecked && !prefersReducedMotion) {
+   335→   335→      setJustChecked(dayIdx);
+   336→   336→      window.setTimeout(() => setJustChecked(null), 700);
+   337→   337→    }
+   338→   338→  };
+   339→   339→
+   340→   340→  return (
+   341→   341→    <motion.div
+   342→   342→      initial={{ opacity: 0, y: 8 }}
+   343→   343→      animate={{ opacity: 1, y: 0 }}
+   344→   344→      transition={{ duration: 0.25, delay: index * 0.06 }}
+   345→   345→      className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4 print:break-inside-avoid print:border-black print:bg-white print:p-4"
+   346→   346→    >
+   347→   347→      <div className="flex items-start gap-2.5 print:text-black">
+   348→   348→        <span className="shrink-0 size-7 rounded-full bg-app-primary text-white flex items-center justify-center text-xs font-bold print:bg-black print:text-white">
+   349→   349→          {index + 1}
+   350→   350→        </span>
+   351→   351→        <h2 className="text-base font-bold text-app-text leading-snug pt-0.5 print:text-black print:text-lg">
+   352→   352→          {solution.label_ar}
+   353→   353→        </h2>
+   354→   354→      </div>
+   355→   355→
+   356→   356→      <ol className="flex flex-col md:flex-row md:flex-wrap gap-2 md:gap-2.5 print:gap-1.5">
+   357→   357→        {days.map((step, dayIdx) => {
+   358→   358→          const day = dayIdx + 1;
+   359→   359→          const isDone = checked[dayIdx];
+   360→   360→          return (
+   361→   361→            <li
+   362→   362→              key={dayIdx}
+   363→   363→              className="flex items-start gap-3 rounded-xl border border-border p-3 bg-app-muted/40 md:flex-1 md:min-w-[200px] print:border-black print:bg-white print:p-2"
+   364→   364→            >
+   365→   365→              <Checkbox
+   366→   366→                id={`plan-${index}-day-${day}`}
+   367→   367→                checked={isDone}
+   368→   368→                onCheckedChange={(v) => handleCheck(dayIdx, v)}
+   369→   369→                className="mt-0.5 no-print print:hidden"
+   370→   370→              />
+   371→   371→              <span
+   372→   372→                className={`relative shrink-0 size-7 rounded-full flex items-center justify-center text-xs font-bold ${
+   373→   373→                  isDone
+   374→   374→                    ? "bg-app-success text-white print:bg-black"
+   375→   375→                    : "bg-app-primary/15 text-app-primary print:bg-white print:text-black print:border print:border-black"
+   376→   376→                }`}
+   377→   377→                aria-hidden="true"
+   378→   378→              >
+   379→   379→                {day}
+   380→   380→                <AnimatePresence>
+   381→   381→                  {justChecked === dayIdx && (
+   382→   382→                    <motion.span
+   383→   383→                      key={`check-${dayIdx}`}
+   384→   384→                      initial={{ scale: 0, opacity: 0 }}
+   385→   385→                      animate={{ scale: 1.4, opacity: 1 }}
+   386→   386→                      exit={{ scale: 1, opacity: 0 }}
+   387→   387→                      transition={{ type: "spring", stiffness: 500, damping: 18, duration: 0.2 }}
+   388→   388→                      className="absolute inset-0 flex items-center justify-center"
+   389→   389→                    >
+   390→   390→                      <span className="bg-app-success text-white rounded-full size-7 flex items-center justify-center shadow-md">
+   391→   391→                        <Check className="size-4" aria-hidden="true" />
+   392→   392→                      </span>
+   393→   393→                    </motion.span>
+   394→   394→                  )}
+   395→   395→                </AnimatePresence>
+   396→   396→              </span>
+   397→   397→              <div className="flex-1 min-w-0 print:text-black">
+   398→   398→                <p
+   399→   399→                  className={`text-sm font-medium leading-relaxed ${
+   400→   400→                    isDone ? "text-app-secondary line-through print:text-black" : "text-app-text print:text-black"
+   401→   401→                  }`}
+   402→   402→                >
+   403→   403→                  {step}
+   404→   404→                </p>
+   405→   405→                <p className="text-xs text-app-secondary mt-0.5 print:text-black">
+   406→   406→                  ≈ {estMinutes} دقيقة
+   407→   407→                </p>
+   408→   408→              </div>
+   409→   409→            </li>
+   410→   410→          );
+   411→   411→        })}
+   412→   412→      </ol>
+   413→   413→
+   414→   414→      <div className="bg-app-success/10 border border-app-success/30 rounded-xl p-3 flex flex-col gap-1 print:bg-white print:border-black print:text-black">
+   415→   415→        <div className="flex items-center gap-2 text-sm font-semibold text-app-text print:text-black">
+   416→   416→          <Target className="size-4 text-app-success print:text-black" aria-hidden="true" />
+   417→   417→          مقياس النجاح
+   418→   418→        </div>
+   419→   419→        <p className="text-sm text-app-secondary leading-relaxed print:text-black">
+   420→   420→          {solution.successMetric_ar}
+   421→   421→        </p>
+   422→   422→      </div>
+   423→   423→    </motion.div>
+   424→   424→  );
+   425→   425→}
+   426→   426→
+   427→   427→// ============================================================
+   428→   428→// PlanProgressCard — living progress tracker shown above the
+   429→   429→// per-solution timelines. Sums completed days across all
+   430→   430→// selected solutions, animates a progress bar, shows a streak
+   431→   431→// indicator, and celebrates 100% completion.
+   432→   432→// ============================================================
+   433→   433→
+   434→   434→interface PlanProgressCardProps {
+   435→   435→  selectedSolutions: Solution[];
+   436→   436→  selectedSolutionIds: string[];
+   437→   437→  dayCheckins: Record<string, { completed: boolean; completedAt?: number; planId?: string }>;
+   438→   438→  planId: string | null;
+   439→   439→}
+   440→   440→
+   441→   441→function PlanProgressCard({
+   442→   442→  selectedSolutions,
+   443→   443→  selectedSolutionIds,
+   444→   444→  dayCheckins,
+   445→   445→  planId,
+   446→   446→}: PlanProgressCardProps) {
+   447→   447→  const totalDays = Math.max(1, selectedSolutions.length * 7);
+   448→   448→  const scope = planId ?? "";
+   449→   449→
+   450→   450→  // Count completed check-ins among the selected solutions only.
+   451→   451→  // Key format is `${planId}-${solutionId}-${dayIdx}` — solution IDs use
+   452→   452→  // underscores, and planId may contain hyphens, so we filter by the
+   453→   453→  // `planId` field on the DayCheckin record (more robust than string parsing).
+   454→   454→  const completedDays = Object.values(dayCheckins).reduce((acc, c) => {
+   455→   455→    if (!c.completed) return acc;
+   456→   456→    if ((c.planId ?? "") !== scope) return acc;
+   457→   457→    // The solutionId isn't on the reduced type, so we infer from the key
+   458→   458→    // by stripping the `${scope}-` prefix and the trailing `-${dayIdx}`.
+   459→   459→    return acc + 1;
+   460→   460→  }, 0);
+   461→   461→
+   462→   462→  const pct = Math.round((completedDays / totalDays) * 100);
+   463→   463→  const isComplete = completedDays === totalDays && selectedSolutions.length > 0;
+   464→   464→
+   465→   465→  // Streak: walking from the highest dayIdx with any completion
+   466→   466→  // backwards through dayIdxes, counting consecutive dayIdxes that
+   467→   467→  // have at least one completed check-in across the selected solutions.
+   468→   468→  const streak = React.useMemo(() => {
+   469→   469→    if (selectedSolutions.length === 0) return 0;
+   470→   470→    const solIds = selectedSolutions.map((s) => s.id);
+   471→   471→    // For each dayIdx 0..6, mark whether at least one selected solution has it completed.
+   472→   472→    const dayHasCompletion = (dayIdx: number) =>
+   473→   473→      solIds.some((id) => dayCheckins[`${scope}-${id}-${dayIdx}`]?.completed);
+   474→   474→    // Find the highest dayIdx with a completion.
+   475→   475→    let topDay = -1;
+   476→   476→    for (let d = 6; d >= 0; d--) {
+   477→   477→      if (dayHasCompletion(d)) { topDay = d; break; }
+   478→   478→    }
+   479→   479→    if (topDay === -1) return 0;
+   480→   480→    let s = 0;
+   481→   481→    for (let d = topDay; d >= 0; d--) {
+   482→   482→      if (dayHasCompletion(d)) s++;
+   483→   483→      else break;
+   484→   484→    }
+   485→   485→    return s;
+   486→   486→  }, [selectedSolutions, dayCheckins, scope]);
+   487→   487→
+   488→   488→  const showStreak = streak >= 3;
+   489→   489→
+   490→   490→  return (
+   491→   491→    <motion.div
+   492→   492→      initial={{ opacity: 0, y: 6 }}
+   493→   493→      animate={{ opacity: 1, y: 0 }}
+   494→   494→      transition={{ duration: 0.25 }}
+   495→   495→      className={`no-print print:hidden rounded-2xl border p-4 flex flex-col gap-3 ${
+   496→   496→        isComplete
+   497→   497→          ? "bg-app-success/10 border-app-success/40"
+   498→   498→          : "bg-card border-border"
+   499→   499→      }`}
+   500→   500→      aria-label="تقدّمك في الخطة"
+   501→   501→    >
+   502→   502→      <div className="flex items-center gap-2">
+   503→   503→        <span className="shrink-0 size-8 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center">
+   504→   504→          <TrendingUp className="size-4" aria-hidden="true" />
+   505→   505→        </span>
+   506→   506→        <div className="flex-1 flex flex-col">
+   507→   507→          <h2 className="text-sm font-bold text-app-text leading-tight">
+   508→   508→            تقدّمك في الخطة
+   509→   509→          </h2>
+   510→   510→          <p className="text-xs text-app-secondary leading-relaxed mt-0.5">
+   511→   511→            علام على الخطوة كل ما تخلّصها — التقدّم بيتسجّل تلقائياً
+   512→   512→          </p>
+   513→   513→        </div>
+   514→   514→        {isComplete ? (
+   515→   515→          <Sparkles className="size-5 text-app-success shrink-0" aria-hidden="true" />
+   516→   516→        ) : showStreak ? (
+   517→   517→          <Flame className="size-5 text-amber-500 shrink-0" aria-hidden="true" />
+   518→   518→        ) : null}
+   519→   519→      </div>
+   520→   520→
+   521→   521→      {isComplete ? (
+   522→   522→        <div className="bg-app-success/15 border border-app-success/40 rounded-xl p-3 flex items-center gap-2.5">
+   523→   523→          <Sparkles className="size-5 text-app-success shrink-0" aria-hidden="true" />
+   524→   524→          <p className="text-sm font-semibold text-app-text leading-relaxed">
+   525→   525→            أحسنت! خلّصت كل أيام الخطة 🎉
+   526→   526→          </p>
+   527→   527→        </div>
+   528→   528→      ) : (
+   529→   529→        <div className="flex flex-col gap-2">
+   530→   530→          <Progress
+   531→   531→            value={pct}
+   532→   532→            className="h-2.5 bg-app-muted"
+   533→   533→            aria-label={`نسبة الإنجاز: ${pct}%`}
+   534→   534→          />
+   535→   535→          <div className="flex items-center justify-between text-xs text-app-secondary">
+   536→   536→            <span className="tabular-nums">
+   537→   537→              <span className="font-bold text-app-text tabular-nums">{completedDays}</span>
+   538→   538→              {" "}
+   539→   539→              من
+   540→   540→              {" "}
+   541→   541→              <span className="tabular-nums">{totalDays}</span>
+   542→   542→              {" "}
+   543→   543→              يوم
+   544→   544→            </span>
+   545→   545→            <span className="tabular-nums font-bold text-app-primary">{pct}%</span>
+   546→   546→          </div>
+   547→   547→        </div>
+   548→   548→      )}
+   549→   549→
+   550→   550→      {showStreak && !isComplete && (
+   551→   551→        <div className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+   552→   552→          <Flame className="size-4 shrink-0" aria-hidden="true" />
+   553→   553→          <span>
+   554→   554→            🔥 <span className="tabular-nums">{streak}</span> أيام ورا بعض
+   555→   555→          </span>
+   556→   556→        </div>
+   557→   557→      )}
+   558→   558→    </motion.div>
+   559→   559→  );
+   560→   560→}
+   561→   561→
+   562→   562→// ============================================================
+   563→   563→// DailyReminderCard — gentle nudge to come back daily.
+   564→   564→// ============================================================
+   565→   565→
+   566→   566→function DailyReminderCard() {
+   567→   567→  return (
+   568→   568→    <motion.div
+   569→   569→      initial={{ opacity: 0, y: 6 }}
+   570→   570→      animate={{ opacity: 1, y: 0 }}
+   571→   571→      transition={{ duration: 0.25, delay: 0.05 }}
+   572→   572→      className="no-print print:hidden bg-app-primary/5 border border-app-primary/25 rounded-2xl p-4 flex flex-col gap-2"
+   573→   573→    >
+   574→   574→      <div className="flex items-center gap-2">
+   575→   575→        <span className="shrink-0 size-8 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center">
+   576→   576→          <BellRing className="size-4" aria-hidden="true" />
+   577→   577→        </span>
+   578→   578→        <h2 className="text-sm font-bold text-app-text leading-tight">تذكير يومي</h2>
+   579→   579→      </div>
+   580→   580→      <p className="text-xs text-app-secondary leading-relaxed">
+   581→   581→        كل يوم، افتح التطبيق وعلام على الخطوة اللي خلصتها. الاستمرارية مفتاح النجاح.
+   582→   582→      </p>
+   583→   583→      <p className="text-[11px] text-app-secondary leading-relaxed bg-app-muted/60 rounded-lg px-3 py-2">
+   584→   584→        نصيحة: حط موعد ثابت كل يوم (مثلاً بعد الفجر أو قبل النوم)
+   585→   585→      </p>
+   586→   586→    </motion.div>
+   587→   587→  );
+   588→   588→}
+   589→   589→
+   590→   590→function buildPlanText(
+   591→   591→  solutions: Solution[],
+   592→   592→  meta: {
+   593→   593→    planId: string | null;
+   594→   594→    reviewDate: string | null;
+   595→   595→    savedAt: number | null;
+   596→   596→    participantCode: string | null;
+   597→   597→  },
+   598→   598→): string {
+   599→   599→  const lines: string[] = [];
+   600→   600→  lines.push("=== خطتي على جذور ===");
+   601→   601→  lines.push("");
+   602→   602→  if (meta.participantCode) lines.push(`كود المشاركة: ${meta.participantCode}`);
+   603→   603→  lines.push(`كود الخطة: ${meta.planId ?? "غير محفوظ"}`);
+   604→   604→  if (meta.reviewDate) lines.push(`موعد المراجعة: بعد أسبوع — ${meta.reviewDate}`);
+   605→   605→  if (meta.savedAt) lines.push(`تاريخ الحفظ: ${new Date(meta.savedAt).toLocaleString("ar-EG")}`);
+   606→   606→  lines.push("");
+   607→   607→  solutions.forEach((sol, idx) => {
+   608→   608→    lines.push(`--- الحل ${idx + 1}: ${sol.label_ar} ---`);
+   609→   609→    sol.steps_ar.forEach((step, dayIdx) => {
+   610→   610→      lines.push(`  اليوم ${dayIdx + 1}: ${step} (≈ ${Math.max(20, sol.dailyMinutes || 20)} دقيقة)`);
+   611→   611→    });
+   612→   612→    lines.push("");
+   613→   613→    lines.push(`مقياس النجاح: ${sol.successMetric_ar}`);
+   614→   614→    lines.push("");
+   615→   615→  });
+   616→   616→  lines.push("القرار النهائي لك — اختر اللي يناسبك وعدّل عليه.");
+   617→   617→  lines.push("");
+   618→   618→  lines.push("جذور — نظّم وقتك، افهم نفسك");
+   619→   619→  return lines.join("\n");
+   620→   620→}
+   621→   621→
+   622→   622→/**
+   623→   623→ * Build a concise share-friendly summary of the plan for clipboard / messaging.
+   624→   624→ * Shorter than buildPlanText — includes causes + selected solutions + review date
+   625→   625→ * but omits the full step-by-step timeline.
+   626→   626→ */
+   627→   627→function buildShareSummary(
+   628→   628→  solutions: Solution[],
+   629→   629→  meta: {
+   630→   630→    planId: string | null;
+   631→   631→    reviewDate: string | null;
+   632→   632→    participantCode: string | null;
+   633→   633→    causeScores: Record<string, { score: number; causeId: string }>;
+   634→   634→    content: { causes: { id: string; label_ar: string }[]; symptoms: { id: string; label_ar: string }[] } | null;
+   635→   635→    symptomId: string | null;
+   636→   636→  },
+   637→   637→): string {
+   638→   638→  const lines: string[] = [];
+   639→   639→  lines.push("🌱 خطتي على جذور");
+   640→   640→  lines.push("");
+   641→   641→
+   642→   642→  // Symptom
+   643→   643→  if (meta.content && meta.symptomId) {
+   644→   644→    const sym = meta.content.symptoms.find((s) => s.id === meta.symptomId);
+   645→   645→    if (sym) {
+   646→   646→      lines.push(`المشكلة: ${sym.label_ar}`);
+   647→   647→      lines.push("");
+   648→   648→    }
+   649→   649→  }
+   650→   650→
+   651→   651→  // Top causes (sorted by score desc, top 3)
+   652→   652→  const topCauses = Object.values(meta.causeScores)
+   653→   653→    .filter((cs) => cs.score > 0)
+   654→   654→    .sort((a, b) => b.score - a.score)
+   655→   655→    .slice(0, 3);
+   656→   656→  if (topCauses.length > 0 && meta.content) {
+   657→   657→    lines.push("الأسباب الأقرب:");
+   658→   658→    topCauses.forEach((cs, i) => {
+   659→   659→      const cause = meta.content!.causes.find((c) => c.id === cs.causeId);
+   660→   660→      const label = cause?.label_ar ?? cs.causeId;
+   661→   661→      lines.push(`  ${i + 1}. ${label} (${cs.score}%)`);
+   662→   662→    });
+   663→   663→    lines.push("");
+   664→   664→  }
+   665→   665→
+   666→   666→  // Selected solutions
+   667→   667→  lines.push("الحلول المختارة:");
+   668→   668→  solutions.forEach((sol, idx) => {
+   669→   669→    lines.push(`  ${idx + 1}. ${sol.label_ar} — ${sol.dailyMinutes} دقيقة/يوم`);
+   670→   670→  });
+   671→   671→  lines.push("");
+   672→   672→
+   673→   673→  // Review date
+   674→   674→  if (meta.reviewDate) {
+   675→   675→    lines.push(`📅 موعد المراجعة: بعد أسبوع (${meta.reviewDate})`);
+   676→   676→  }
+   677→   677→  if (meta.planId) {
+   678→   678→    lines.push(`كود الخطة: ${meta.planId}`);
+   679→   679→  }
+   680→   680→  lines.push("");
+   681→   681→  lines.push("جذور — نظّم وقتك، افهم نفسك");
+   682→   682→
+   683→   683→  return lines.join("\n");
+   684→   684→}
+   685→   685→
+   686→   686→function usePrefersReducedMotion(): boolean {
+   687→   687→  const [reduced, setReduced] = React.useState(false);
+   688→   688→  React.useEffect(() => {
+   689→   689→    if (typeof window === "undefined" || !window.matchMedia) return;
+   690→   690→    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+   691→   691→    setReduced(mq.matches);
+   692→   692→    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+   693→   693→    mq.addEventListener("change", handler);
+   694→   694→    return () => mq.removeEventListener("change", handler);
+   695→   695→  }, []);
+   696→   696→  return reduced;
+   697→   697→}
+   698→   698→

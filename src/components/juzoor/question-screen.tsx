@@ -372,7 +372,7 @@ function OptionButton({
       type="button"
       onClick={onClick}
       whileTap={{ scale: 0.98 }}
-      className="touch-target min-h-[56px] text-start rounded-xl border-2 border-border bg-card p-4 flex items-center justify-between gap-3 hover:border-app-primary hover:bg-app-primary/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/40"
+      className="touch-target min-h-[56px] text-start rounded-xl border-2 border-border bg-card-gradient p-4 flex items-center justify-between gap-3 hover:border-app-primary hover:bg-app-primary/5 hover:shadow-card-soft transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/40"
     >
       <span className="text-base font-medium text-app-text leading-relaxed flex-1">{label}</span>
       <span className="shrink-0 flex items-center gap-2">
@@ -412,7 +412,7 @@ function LoadingCard() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.25 }}
-        className="bg-card border border-border rounded-2xl shadow-sm px-6 py-8 flex flex-col items-center gap-4 w-full max-w-xs"
+        className="bg-card-gradient shadow-card-soft border border-border rounded-2xl px-6 py-8 flex flex-col items-center gap-4 w-full max-w-xs"
         role="status"
         aria-live="polite"
       >

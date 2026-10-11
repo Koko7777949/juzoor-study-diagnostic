@@ -31,7 +31,7 @@ export function ScenariosScreen() {
       </header>
 
       {selectedSolutions.length === 0 && (
-        <Card className="p-4 bg-app-muted border-app-accent/30 text-app-secondary text-sm">
+        <Card className="p-4 bg-card-gradient shadow-card-soft border-app-accent/30 text-app-secondary text-sm">
           مفيش حلول مختارة. ارجع لصفحة المقارنة واختر أكتر من حل.
           <div className="mt-3">
             <Button
@@ -80,7 +80,7 @@ function SolutionScenarioTabs({ solution, index }: { solution: Solution; index: 
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: index * 0.05 }}
-      className="bg-card rounded-2xl border border-border p-5 flex flex-col gap-4"
+      className="bg-card-gradient shadow-card-soft rounded-2xl border border-border p-5 flex flex-col gap-4"
     >
       <div className="flex items-start gap-2">
         <span className="shrink-0 size-7 rounded-full bg-app-primary text-white flex items-center justify-center text-xs font-bold">
@@ -120,7 +120,7 @@ function SolutionScenarioTabs({ solution, index }: { solution: Solution; index: 
         </TabsContent>
       </Tabs>
 
-      <div className="flex flex-col gap-2 pt-1">
+      <div className="bg-card-gradient-success border border-app-success/30 rounded-xl p-3 flex flex-col gap-2">
         <h3 className="text-sm font-semibold text-app-text">شروط النجاح:</h3>
         <ul className="flex flex-col gap-1.5">
           {solution.scenarios.successConditions_ar.map((c, i) => (

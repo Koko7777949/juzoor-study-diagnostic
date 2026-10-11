@@ -100,7 +100,7 @@ export function CausesScreen() {
       <Collapsible
         open={diagramOpen}
         onOpenChange={setDiagramOpen}
-        className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
+        className="bg-card-gradient shadow-card-soft rounded-2xl border border-border overflow-hidden"
       >
         <CollapsibleTrigger asChild>
           <button
@@ -148,7 +148,7 @@ export function CausesScreen() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
       >
-        <Card className="p-4 bg-card border-border shadow-sm">
+        <Card className="p-4 bg-card-gradient shadow-card-soft border-border">
           <div className="flex items-start gap-3 mb-3">
             <span className="shrink-0 size-8 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center mt-0.5">
               <TrendingUp className="size-4" aria-hidden="true" />
@@ -181,7 +181,7 @@ export function CausesScreen() {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-app-accent/15 border border-app-accent/40 rounded-2xl p-4 flex flex-col gap-3"
+          className="bg-card-gradient-accent border border-app-accent/40 rounded-2xl p-4 flex flex-col gap-3"
         >
           <p className="text-sm font-medium text-app-text leading-relaxed">
             السببين متقاربين، نقدر نتعمق أكتر
@@ -200,7 +200,7 @@ export function CausesScreen() {
 
       {/* Low confidence */}
       {lowConfidence && (
-        <Card className="p-4 bg-app-muted border-app-accent/30">
+        <Card className="p-4 bg-card-gradient shadow-card-soft border-app-accent/30">
           <p className="text-sm text-app-secondary leading-relaxed">{explainText.lowConfidence}</p>
         </Card>
       )}
@@ -227,7 +227,7 @@ export function CausesScreen() {
       <Collapsible
         open={reviewOpen}
         onOpenChange={setReviewOpen}
-        className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
+        className="bg-card-gradient shadow-card-soft rounded-2xl border border-border overflow-hidden"
       >
         <CollapsibleTrigger asChild>
           <button

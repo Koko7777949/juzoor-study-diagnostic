@@ -59,8 +59,8 @@ export function SymptomScreen() {
               aria-pressed={selected}
               className={`text-start rounded-2xl border-2 p-4 min-h-[96px] flex flex-col gap-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/40 ${
                 selected
-                  ? "border-app-primary bg-app-primary/5 shadow-sm"
-                  : "border-border bg-card hover:border-app-primary/40 hover:bg-app-muted/60"
+                  ? "border-app-primary bg-card-gradient-accent shadow-card-hover"
+                  : "border-border bg-card-gradient shadow-card-soft hover:border-app-primary/40 hover:bg-app-muted/60"
               }`}
             >
               <div className="flex items-center gap-2.5">

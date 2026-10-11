@@ -82,8 +82,8 @@ export function ProfileScreen() {
                   htmlFor={id}
                   className={`cursor-pointer rounded-xl border-2 p-3 flex flex-col items-center justify-center gap-1 touch-target transition-all ${
                     checked
-                      ? "border-app-primary bg-app-primary/5 text-app-primary"
-                      : "border-border bg-card text-app-text hover:border-app-primary/40"
+                      ? "border-app-primary bg-app-primary/5 text-app-primary shadow-card-soft"
+                      : "border-border bg-card-gradient text-app-text hover:border-app-primary/40"
                   }`}
                 >
                   <span className="text-2xl font-bold tabular-nums">{m}</span>
@@ -121,8 +121,8 @@ export function ProfileScreen() {
                   htmlFor={id}
                   className={`cursor-pointer rounded-xl border-2 p-4 flex items-center justify-center gap-2 touch-target font-medium transition-all ${
                     checked
-                      ? "border-app-primary bg-app-primary/5 text-app-primary"
-                      : "border-border bg-card text-app-text hover:border-app-primary/40"
+                      ? "border-app-primary bg-app-primary/5 text-app-primary shadow-card-soft"
+                      : "border-border bg-card-gradient text-app-text hover:border-app-primary/40"
                   }`}
                 >
                   {opt.label}
@@ -160,8 +160,8 @@ export function ProfileScreen() {
                     htmlFor={id}
                     className={`cursor-pointer rounded-xl border-2 p-4 flex items-center justify-center gap-2 touch-target font-medium transition-all ${
                       checked
-                        ? "border-app-primary bg-app-primary/5 text-app-primary"
-                        : "border-border bg-card text-app-text hover:border-app-primary/40"
+                        ? "border-app-primary bg-app-primary/5 text-app-primary shadow-card-soft"
+                        : "border-border bg-card-gradient text-app-text hover:border-app-primary/40"
                     }`}
                   >
                     {opt.label}
@@ -174,7 +174,7 @@ export function ProfileScreen() {
         </section>
       )}
 
-      <Card className="mt-2 p-4 bg-app-muted border-app-accent/30">
+      <Card className="mt-2 p-4 bg-card-gradient shadow-card-soft border-app-accent/30">
         <p className="text-xs text-app-secondary leading-relaxed">
           إجاباتك بتساعدنا نفلتر الحلول اللي تناسب وقتك. تقدر ترجع تعدّلها بعدين.
         </p>

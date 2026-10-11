@@ -1018,3 +1018,114 @@ Task: QA verification + follow-up screen diagnosis recap + gradient backgrounds 
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
 5. **Apply gradient card styles to remaining screens**: causes cards, solution cards, plan timeline cards could all benefit from the new `bg-card-gradient` and `shadow-card-soft` utilities.
 6. **Daily streak notifications**: Add browser notification API for daily check-in reminders.
+
+---
+Task ID: 18
+Agent: zai-coder
+Task: Apply gradient card styles to remaining screens + add study tips section on plan screen
+
+Work Log:
+- Added 13 new tip-related UI strings to `content/ui/messages.json` (tips_title, tips_subtitle, tip_1..6_title, tip_1..6_desc). Schema is `Record<string,string>` so no schema change needed.
+- `cause-card.tsx`: rank #1 card now uses `bg-card-gradient-accent shadow-card-hover` (kept amber border for the "الأقرب" badge treatment); other ranks use `bg-card-gradient shadow-card-soft`.
+- `causes-screen.tsx`: applied gradients to the Ishikawa collapsible container, trajectory recap card, close-causes banner (`bg-card-gradient-accent`), low-confidence card, and review-answers collapsible (consistency).
+- `solutions-screen.tsx`: gradients on the `WeightSliders` container, mobile `SolutionCard` (top #1 gets `bg-card-gradient-accent shadow-card-hover`, others get `bg-card-gradient shadow-card-soft`, selected state adds `shadow-card-soft`), `ScoreLegend` (now a proper rounded card), and `EmptySolutionsState` icon container.
+- `plan-screen.tsx`: gradients on `PlanProgressCard` (`bg-card-gradient-success shadow-card-soft` when 100% complete), `DailyReminderCard` (`bg-card-gradient-accent shadow-card-soft`), `PlanTimeline` cards, success-metric card inside `PlanTimeline` (`bg-card-gradient-success`), and review-date card. Added `print:bg-none print:bg-white` to gradient-bearing plan cards so the gradient doesn't bleed into the PDF/print export (the existing `print:bg-white` Tailwind utility only overrides `background-color`, not the `background-image` shorthand from the gradient utilities).
+- New `StudyTipsSection` component in `plan-screen.tsx`: collapsible, defaults to collapsed, `no-print print:hidden`, header with `Lightbulb` icon + animated `ChevronDown` (rotates 180° on open, respects `prefers-reduced-motion`), body is a 6-card grid (`grid-cols-1 sm:grid-cols-2`). Each tip card uses `bg-card-gradient shadow-card-soft` with a small icon circle (Clock, MapPin, Moon, Calendar, Users, Smartphone). Staggered fade-in animation (skipped under reduced motion). Inserted between the review-date card and the action buttons.
+- `profile-screen.tsx`: main info Card uses `bg-card-gradient shadow-card-soft`; all 3 radio option labels (minutes, urgent, alone) — when **selected** they add `shadow-card-soft`; when **not selected** they use `bg-card-gradient` instead of `bg-card`.
+- `symptom-screen.tsx`: default state `bg-card-gradient shadow-card-soft`; selected state `bg-card-gradient-accent shadow-card-hover` (kept `border-app-primary`).
+- `scenarios-screen.tsx`: each `SolutionScenarioTabs` card uses `bg-card-gradient shadow-card-soft`; success-conditions list (previously unstyled `<ul>`) now wrapped in a `bg-card-gradient-success border border-app-success/30 rounded-xl p-3` card.
+- `question-screen.tsx`: `OptionButton` swapped `bg-card` → `bg-card-gradient` and added `hover:shadow-card-soft`; `LoadingCard` swapped `bg-card shadow-sm` → `bg-card-gradient shadow-card-soft`.
+- Ran `bun run lint` after each file edit → exit 0 throughout. One transient dev-server error (`ComparisonTable defined multiple times`) appeared during a partial save of `solutions-screen.tsx` (hot-reload artifact), resolved on next save.
+- Verified via agent-browser: wiped localStorage, walked the worked example (Q1=b, Q2B=b, Q3=a, Q4=d, Q5=b, Q6=b, Q9=b). Final scores matched exactly: TIME=90, DIST=67, MOT=55. Inspected DOM via `document.querySelectorAll('main [class*="bg-card-gradient"]')` and confirmed gradient + shadow utilities are applied on causes screen (5 containers including rank-1 accent), solutions screen (sliders, top #1, others, legend), scenarios screen (3 cards + 3 success cards), and plan screen (progress, daily reminder, 3 timelines, 3 success metrics, review date, new tips container, and 6 tip cards).
+- Verified the new tips section is collapsed by default (`expanded=false`), expands on click (`expanded=true`), and shows all 6 tip headings (قاعدة 25-5, المكان الثابت, النوم قبل المذاكرة, المراجعة المتباعدة, علّم غيرك, ابعد المشتتات). Re-clicking collapses back to `expanded=false`.
+
+Stage Summary:
+- Visual consistency: every card on every screen now uses the same gradient + soft-shadow system introduced in Task 17 — causes, solutions, plan, profile, symptom, scenarios, and question screens all share the same depth language.
+- New "Study Tips & Resources" section: gives students 6 general-purpose study tips (Pomodoro, fixed location, sleep, spaced repetition, teach-to-learn, remove distractions) without coupling them to any specific solution. Defaults to collapsed so it doesn't clutter the default plan view; explicitly hidden in print.
+- Print export integrity preserved: gradient utilities would have bled into PDF export because Tailwind's `print:bg-white` only overrides `background-color` (longhand), not the `background-image` (shorthand) set by `.bg-card-gradient*`. Added `print:bg-none print:bg-white` to plan cards so printed plans stay clean white.
+- Worked example §9 still matches exactly: TIME=90, DIST=67, MOT=55. Engine files untouched.
+- `bun run lint` → exit 0. Dev server: all `GET / 200`.
+
+---
+Task ID: 18
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + gradient card styles on all remaining screens + study tips section on plan screen
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states, review answers, trajectory recap, how-it-works onboarding, daily check-in streak, journey summary, side-by-side comparison dialog, date-based check-in scoping, follow-up diagnosis recap, gradient backgrounds) still work.
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses, no errors/warnings
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested gradient card styles: confirmed via JS that `bg-card-gradient` class is present on cards ✓
+5. Tested study tips section: collapsible appears on plan screen, expands to show 6 tips with correct titles ✓
+
+### New features / polish added
+
+**1. Gradient card styles applied to all remaining screens** (8 component files)
+- **Cause cards** (`cause-card.tsx`): rank #1 uses `bg-card-gradient-accent shadow-card-hover`, others use `bg-card-gradient shadow-card-soft`
+- **Causes screen** (`causes-screen.tsx`): 5 containers use gradient styles (Ishikawa, trajectory recap, close-causes banner, low-confidence card, review-answers section)
+- **Solutions screen** (`solutions-screen.tsx`): WeightSliders, SolutionCard (top #1 uses accent gradient), ScoreLegend, EmptySolutionsState
+- **Plan screen** (`plan-screen.tsx`): PlanProgressCard (switches to `bg-card-gradient-success` at 100%), DailyReminderCard (accent gradient), PlanTimeline cards, success-metric cards (success gradient), review-date card
+- **Profile screen** (`profile-screen.tsx`): main info Card + radio option labels (selected adds shadow-card-soft)
+- **Symptom screen** (`symptom-screen.tsx`): cards use `bg-card-gradient shadow-card-soft` (default), `bg-card-gradient-accent shadow-card-hover` (hover)
+- **Scenarios screen** (`scenarios-screen.tsx`): scenario cards + success-conditions cards use success gradient
+- **Question screen** (`question-screen.tsx`): OptionButtons add `hover:shadow-card-soft`, LoadingCard uses gradient + soft shadow
+- Print integrity: added `print:bg-none print:bg-white` to gradient-bearing plan cards so printed/PDF plan stays clean white
+
+**2. Study Tips & Resources section on plan screen** (`plan-screen.tsx` + `content/ui/messages.json`)
+- New collapsible section on the plan screen (below timelines, above action buttons):
+  - Header: `Lightbulb` icon, "نصائح عامة للمذاكرة" title, "إرشادات سريعة تساعدك في رحلتك" subtitle
+  - Animated `ChevronDown` that rotates when expanded (respects reduced motion)
+  - `no-print print:hidden` (not shown in print)
+  - Grid of 6 tip cards (each with `bg-card-gradient shadow-card-soft`):
+    1. **قاعدة 25-5** (Clock icon) — Pomodoro: 25 min study, 5 min break, repeat 4x, long break
+    2. **المكان الثابت** (MapPin icon) — Fixed study place links environment to focus
+    3. **النوم قبل المذاكرة** (Moon icon) — 7-8 hours sleep consolidates memory
+    4. **المراجعة المتباعدة** (Calendar icon) — Spaced repetition: review after 1 day, 3 days, 1 week
+    5. **علّم غيرك** (Users icon) — Teaching others is the strongest test of understanding
+    6. **ابعد المشتتات** (Smartphone icon) — Phone in another room or airplane mode
+- 13 new UI strings added to `content/ui/messages.json`
+
+### Files modified
+- `src/components/juzoor/cause-card.tsx` — gradient + shadow on cards
+- `src/components/juzoor/causes-screen.tsx` — gradient on 5 containers
+- `src/components/juzoor/solutions-screen.tsx` — gradient on sliders, cards, legend, empty state
+- `src/components/juzoor/plan-screen.tsx` — gradient on progress, reminder, timeline, metric cards + new StudyTipsSection component
+- `src/components/juzoor/profile-screen.tsx` — gradient on main card + radio labels
+- `src/components/juzoor/symptom-screen.tsx` — gradient on symptom cards
+- `src/components/juzoor/scenarios-screen.tsx` — gradient on scenario + success cards
+- `src/components/juzoor/question-screen.tsx` — gradient on LoadingCard + hover shadow on options
+- `content/ui/messages.json` — 13 new strings for study tips
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200, no errors ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Gradient card styles: confirmed present via JS evaluation ✓
+- Study tips section: collapsible, expands to show 6 tips with correct titles ✓
+- Print integrity: `print:bg-none print:bg-white` ensures clean printed plans ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values. Final scores match. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works, no automatic upload.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+- **Print gradient override**: The `print:bg-none print:bg-white` was added to plan cards to ensure gradients don't appear in print. If any other screen needs print support in the future, the same override should be applied.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, solutions.
+3. **Accessibility audit**: Full WCAG AA audit; verify screen reader navigation.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
+5. **Daily streak notifications**: Add browser notification API for daily check-in reminders.
+6. **More study tips**: The current 6 tips could be expanded with domain-specific tips (study vs project) and randomized selection to keep it fresh.
