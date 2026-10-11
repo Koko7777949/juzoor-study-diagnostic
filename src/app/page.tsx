@@ -1,26 +1,37 @@
 'use client'
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useJuzoor } from "@/lib/store";
 import { AppShell } from "@/components/juzoor/app-shell";
 import { JuzoorErrorBoundary } from "@/components/juzoor/error-boundary";
 
 export default function Home() {
-  const content = useJuzoor((s) => s.content);
   const init = useJuzoor((s) => s.init);
-  const screen = useJuzoor((s) => s.screen);
 
-  // On first mount: if no content loaded yet (fresh client or persisted but missing), init study.
-  useEffect(() => {
-    if (!content) init("study");
-    // If a persisted session exists, leave it alone — content will be rehydrated by the store.
-    // We re-load content here only when truly missing (rehydration sets content via onRehydrateStorage).
-  }, [content, init]);
+  // Subscribe to the persist middleware's hydration lifecycle. Without
+  // this gate, the auto-init below would fire on every reload (before
+  // hydration has merged in the persisted state) and wipe the persisted
+  // session — including dayCheckins, planId, engine.answers, etc.
+  const hydrated = useSyncExternalStore(
+    (callback) => useJuzoor.persist.onFinishHydration(callback),
+    () => useJuzoor.persist.hasHydrated(),
+    () => true, // SSR: assume hydrated
+  );
 
-  // Safety: if persisted screen exists but no content (edge case), re-init.
+  // After hydration: if content is still missing, this is a truly fresh
+  // client (no persisted session). Boot the study domain. If a session
+  // was restored, onRehydrateStorage already loaded content — leave it
+  // alone so the user lands back on the screen they were on.
   useEffect(() => {
-    if (!content && screen !== "welcome") init("study");
-  }, [content, screen, init]);
+    if (!hydrated) return;
+    const { content, screen } = useJuzoor.getState();
+    if (!content) {
+      init("study");
+    } else if (screen !== "welcome" && !useJuzoor.getState().content) {
+      // Safety edge case: screen was persisted but content somehow missing.
+      init("study");
+    }
+  }, [hydrated, init]);
 
   return (
     <JuzoorErrorBoundary>

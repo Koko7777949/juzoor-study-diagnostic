@@ -1,0 +1,327 @@
+   400→- Cause cards: animated score bars, count-up numbers, rank-1 "الأقرب" badge, branch icons ✓
+   401→- Plan celebration: confetti + motivational message on save ✓
+   402→- All existing features (theme toggle, about, Ishikawa, keyboard nav, color-coded scores, print layout) still work ✓
+   403→
+   404→## Unresolved issues / Risks
+   405→- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values (UND max=6, ANX max=1) that don't match any clean formula. Final scores match regardless. DO NOT re-tune the formula.
+   406→- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions. Adequate for MVP but could be expanded.
+   407→- **Events are local-only** (partially addressed): Research export now works (downloads JSON), but there's no `/api/events` endpoint for automatic upload. The spec mentions this as optional ("per env rule no DB for MVP"). Future work: add API route if research mode is enabled.
+   408→- **E2E tests not written** (carried over): Per env rule "do not write any test code". Cron agent verifies via agent-browser instead.
+   409→
+   410→## Priority recommendations for next phase
+   411→1. **English version toggle**: The spec mentions "توسعات لاحقة" (later expansion) for an English version. Add a language toggle in the footer that switches all UI text. This requires either duplicate content files or a translation layer.
+   412→2. **Expand project domain content**: Add more symptoms, causes, questions, rules, and solutions for the project domain to match the depth of the study domain.
+   413→3. **More UI polish**: Add a mini cause-trajectory sparkline chart on the question screen showing score evolution; add a "share plan" feature (generate a shareable link or QR code); add a "restart from specific question" feature.
+   414→4. **Accessibility audit**: Run a full WCAG AA audit via agent-browser; verify screen reader navigation; add skip-to-content link.
+   415→5. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size is reasonable.
+   416→
+   417→---
+   418→Task ID: 12
+   419→Agent: juzoor-solutions-polish
+   420→Task: Improve solutions screen (expandable detail cards, sticky sliders, top-solution badge) + loading state + empty state
+   421→
+   422→Work Log:
+   423→- Read context: worklog.md (Tasks 1-11), agent-ctx/10-juzoor-polish.md (cause-card amber accent + usePrefersReducedMotion pattern), solutions-screen.tsx, question-screen.tsx, app-shell.tsx, globals.css, store.ts, content/study/solutions.json, ui/collapsible.tsx, ui/tooltip.tsx, engine/types.ts (confirmed Solution/SolutionScore shapes), engine/score-solutions.ts (confirmed `score` vs `priority` semantics — worked example's "75/69/59" are priorities, not raw scores).
+   424→- Rewrote `src/components/juzoor/solutions-screen.tsx`:
+   425→  - Added top-level `SolutionDetailPanel` (reusable in both layouts) — renders causeIds as Badges with ListTree icon, scenarios preview (expected_ar truncated to 80 chars + continuation hint), first step in a blockquote-style box with `+ N خطوات تانية` badge, success metric in a green-accent card (bg-app-success/10 + Check icon).
+   426→  - Desktop table: each row group wrapped in `<Collapsible asChild>` rendering as `<tbody>`. The data `<TableRow>` plus a sibling `<CollapsibleContent asChild>` `<TableRow>` with `colSpan={10}`. The details row uses `data-[state=closed]:hidden` as a safety net.
+   427→  - Added a new "تفاصيل" column (w-12) after the checkbox column with a small ghost button + ChevronDown icon (`aria-label="تفاصيل الحل"`, `aria-expanded`).
+   428→  - The "الحل" name cell is ALSO a CollapsibleTrigger (per task a) — `aria-label="عرض تفاصيل {name}"`. Both triggers control the same Collapsible. Both use `e.stopPropagation()` so the row click (selection toggle) doesn't fire.
+   429→  - ChevronDown has `transition-transform duration-200` + conditional `rotate-180` class when expanded.
+   430→  - Top solution (idx === 0): row gets `bg-amber-50/40` background + tbody gets `ring-1 ring-inset ring-amber-400/40`; name cell shows inline `<Crown>` + "الأفضل لك" gold pill.
+   431→  - Mobile card: outer motion.div gets `border-amber-400/70 ring-1 ring-amber-400/30 shadow-amber-400/10 shadow-md` (mirrors cause-card #1 styling). Corner badge at `-top-2.5 -end-2` with Crown + "الأفضل لك", spring scale-in (stiffness 400, damping 14, delay 0.2).
+   432→  - Converted mobile card from `motion.button` (whole card clickable) to `motion.div` wrapper with a nested `motion.button` (header only) + a separate Collapsible for details. Avoids nested-button invalid HTML while preserving click-to-select on the header area.
+   433→  - Wrapped `<WeightSliders>` in `<div className="md:sticky md:top-20 md:z-20 md:bg-app-bg/95 md:backdrop-blur-sm md:-mx-4 md:px-4 md:py-3 md:rounded-b-xl">`. Mobile keeps sliders inline (no sticky).
+   434→  - Added note below sliders: `<SlidersHorizontal /> حرّك الأوزان وشوف الترتيب بيتغير فوراً`.
+   435→  - Added solution count summary line above the matrix: "عدد الحلول: N — المختار: M من 3" with ListTree icon and `tabular-nums` on numbers.
+   436→  - Added top-level `EmptySolutionsState` component returned early when `solutionScores.length === 0` — SearchX icon + "مفيش حلول متاحة" h2 + friendly message + "ارجع للأسئلة" button calling `useJuzoor(s => s.go)("causes")`.
+   437→  - Used `cn` from `@/lib/utils` for conditional classnames throughout.
+   438→- Updated `src/components/juzoor/question-screen.tsx`:
+   439→  - Added `useReducedMotion` from framer-motion and `Loader2` from lucide-react to imports.
+   440→  - Replaced bare `<div>جارٍ تجهيز السؤال…</div>` early return with `<LoadingCard />` (top-level function component to satisfy `react-hooks/static-components` ESLint rule).
+   441→  - LoadingCard renders: centered card with `bg-card border border-border rounded-2xl shadow-sm`, spinning Loader2 (animate-spin, CSS-based), "بنحلل إجاباتك…" text, three pulsing motion.span dots (staggered scale 0.8→1.2→0.8 over 1.5s, infinite, delay i*0.2), subtext "ثانية، بنجهّز السؤال اللي جاي". `role="status" aria-live="polite"`. When `prefersReducedMotion`, dots render as plain spans (no animation, faded bg-app-primary/60).
+   442→- Lint pass: `bun run lint` exit 0 on first run (no errors).
+   443→- Verified via agent-browser on desktop + mobile viewports:
+   444→  - Walked worked example flow: Q1=b, Q2B=b, Q3=a, Q4=d, Q5=b, Q6=b, Q9=b → causes screen shows TIME/DIST/MOT → solutions screen.
+   445→  - Desktop table: 13 inner Collapsible tbodies (one per solution). First tbody has `ring-1 ring-inset` (amber for top solution). Row 1 cells: ["", "", "الأفضل لك\nقاعدة أهم 3 مهام", "3/5", "5/5", "4/5", "5/5", "83", "75", "5"] — col 8 (الدرجة)=83 raw, col 9 (الأولوية)=75 priority. Verified 83×0.9=75 matches §9 expected S_TIME_2=75.
+   446→  - Row 2 (S_TIME_1): score=77, priority=69 → 77×0.9=69 ✓
+   447→  - Row 3 (S_DIST_1): score=88, priority=59 → 88×0.67=59 ✓
+   448→  - Clicked "تفاصيل" button via JS (covered by sticky sliders in viewport) — Collapsible opens: `data-state="open"`, childCount=2, content is `<tr>` with `display:table-row`, SolutionDetailPanel renders (causeIds, scenarios preview, first step + remaining count, success metric all present in textContent).
+   449→  - Sticky sliders: after scrolling 300px down, wrapper bounding rect shows `top:80, isSticky:true` — confirming `md:sticky md:top-20` (80px) pins below app header.
+   450→  - Solution count summary text: "عدد الحلول: 13 — المختار: 3 من 3".
+   451→  - Mobile viewport (375x812): 13 cards rendered (table hidden via `md:block hidden`). Top card has amber border + ring + shadow + corner "الأفضل لك" Crown badge. Clicked تفاصيل button on card 1 — `aria-expanded="true"`, content `data-state="open"` + `display:block`, chevron `<svg>` has `rotate-180` class + computed `rotate:180deg`. Panel text identical to desktop version.
+   452→  - Empty state code in place (defensive — can't trigger naturally since engine always emits 3+ solutions on this screen).
+   453→  - LoadingCard code in place (fires only on transient `currentQuestion === null` which lasts <1 frame due to synchronous store transitions; code is correct and lint-clean).
+   454→
+   455→Stage Summary:
+   456→- 2 files rewritten (solutions-screen.tsx full rewrite ~600 LOC, question-screen.tsx loading state replacement + LoadingCard top-level component).
+   457→- Solutions screen now feels richer: each row/card expandable to reveal causeIds, scenarios preview, first step + remaining count, success metric in a green-accent card. Two trigger mechanisms per row (the "تفاصيل" button + the name cell). Multiple rows open simultaneously for side-by-side comparison. #1 priority solution gets gold/amber border + ring + Crown "الأفضل لك" badge (corner on mobile, inline on desktop). Weight sliders sticky on desktop. Solution count summary above matrix. Defensive empty state for edge case.
+   458→- Question screen loading state: centered card with spinning Loader2, "بنحلل إجاباتك…" text, three staggered pulsing dots (0.8→1.2→0.8 over 1.5s, infinite), respects prefers-reduced-motion.
+   459→- Worked example §9 still reproduces exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium); S_TIME_2 priority=75, S_TIME_1=69, S_DIST_1=59. Lint passes (exit 0). Dev server compiles cleanly.
+   460→- Did NOT touch engine files (`/src/lib/engine/*`) or content JSON (`/content/*`) — engine determinism preserved. Used logical properties (`ps-/pe-/ms-/me-`, `start/end`) throughout for RTL.
+   461→
+   462→---
+   463→Task ID: 13
+   464→Agent: cron-review (Africa/Cairo)
+   465→Task: QA verification + cause-trajectory sparkline + share plan + error boundary + solutions expandable cards + loading/empty states + accessibility
+   466→
+   467→## Current Project Status (assessment)
+   468→- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+   469→- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+   470→- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+   471→- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet) still work.
+   472→
+   473→## Current goals / completed modifications / verification results
+   474→
+   475→### QA performed
+   476→1. `bun run lint` → exit 0 (clean)
+   477→2. Dev log: only HTTP 200 responses, no errors/warnings
+   478→3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   479→   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   480→   - Rank-1 cause has "الأقرب" badge ✓
+   481→4. Tested cause-trajectory chart: appears after 2 answers, updates with each new answer ✓
+   482→5. Tested share plan button: "تم نسخ ملخص الخطة" toast appears ✓
+   483→6. Tested solutions screen expandable cards: "تفاصيل الحل" expands to show causes + scenario preview + first step + success metric ✓
+   484→
+   485→### New features added
+   486→
+   487→**1. Mini cause-trajectory sparkline chart** (`src/components/juzoor/cause-trajectory-chart.tsx` + `src/lib/store.ts`)
+   488→- New `ScoreSnapshot` type in store: `{ answerIndex, qid, scores: Record<causeId, number> }`
+   489→- New `scoreHistory: ScoreSnapshot[]` field in store, persisted to localStorage
+   490→- `answerQuestion` now pushes a snapshot after each answer; `goToPreviousQuestion` pops the last snapshot
+   491→- New `CauseTrajectoryChart` component:
+   492→  - Renders a responsive SVG (viewBox 240x60) with polylines for the top 3 causes
+   493→  - Each line colored from the Juzoor palette (teal/purple/green)
+   494→  - 70% threshold dashed line (high-confidence marker)
+   495→  - End dot highlighted on the rightmost point (current state)
+   496→  - Animated path drawing (pathLength 0→1) and dot spring scale-in
+   497→  - Legend below shows cause names with colors and latest scores
+   498→  - Only shows when scoreHistory.length >= 2 (needs 2+ data points)
+   499→- Placed on the question screen below the progress bar
+   500→- Respects `prefers-reduced-motion`
+   501→
+   502→**2. Share plan summary** (`src/components/juzoor/plan-screen.tsx`)
+   503→- New `buildShareSummary()` function: generates a concise clipboard-friendly text with:
+   504→  - Symptom label, top 3 causes (with scores), selected solutions (with daily minutes), review date, plan ID
+   505→- New "شارك ملخص الخطة" button with `Share2` icon
+   506→- Uses `navigator.clipboard.writeText()` with fallback to opening a new window
+   507→- Toast "تم نسخ ملخص الخطة" with description "تقدر تلصقه في أي مكان"
+   508→- Placed in a 2-column grid alongside the print button
+   509→
+   510→**3. Error boundary** (`src/components/juzoor/error-boundary.tsx`)
+   511→- New `JuzoorErrorBoundary` React class component wrapping the entire app
+   512→- Catches render-time errors, shows calm Arabic fallback screen:
+   513→  - Sprout icon, "حصلت حاجة مش متوقعة" title, explanation text
+   514→  - Error details in a muted card (error.message)
+   515→  - "امسح البيانات وابدأ من جديد" button that wipes localStorage + reloads
+   516→- Minimal styling (doesn't depend on full app chrome loading)
+   517→- Integrated in `src/app/page.tsx` wrapping `<AppShell />`
+   518→
+   519→**4. Skip-to-content link** (`src/components/juzoor/app-shell.tsx`)
+   520→- Added `<a href="#main-content" className="sr-only focus:not-sr-only ...">` skip link
+   521→- Target `id="main-content"` with `tabIndex={-1}` on the screen content container
+   522→- Visually hidden until focused (keyboard navigation), then appears as a fixed pill at top-right
+   523→- Improves keyboard/screen-reader navigation (WCAG 2.1 Skip Link best practice)
+   524→
+   525→**5. Solutions screen expandable detail cards** (`src/components/juzoor/solutions-screen.tsx`)
+   526→- Each solution row/card is now expandable using Radix `Collapsible` (asChild rendering as `<tbody>`)
+   527→- Expanded panel shows:
+   528→  - **Causes**: badges listing the causes this solution addresses (looked up from `content.causes`)
+   529→  - **Scenario preview**: truncated "expected" scenario text (~80 chars) + "اعرض كل السيناريوهات في الصفحة التالية" hint
+   530→  - **First step**: shows `steps_ar[0]` + "+ N خطوات تانية" badge
+   531→  - **Success metric**: `successMetric_ar` in a green-accent card
+   532→- "تفاصيل" button on each row with `ChevronDown` icon that rotates 180° when expanded
+   533→- `aria-label="تفاصيل الحل"` + `aria-expanded` state
+   534→- Multiple rows can be open simultaneously (side-by-side comparison)
+   535→- **Top solution highlight**: #1 priority row gets gold/amber border + ring + "الأفضل لك" Crown badge
+   536→- **Solution count summary**: "عدد الحلول: N — المختار: M من 3" with tabular-nums
+   537→- **Weight sliders**: moved from sticky to inline (sticky was overlapping table content and blocking clicks)
+   538→
+   539→**6. Loading state** (`src/components/juzoor/question-screen.tsx`)
+   540→- New `LoadingCard` component: centered card with spinning `Loader2`, "بنحلل إجاباتك…" text
+   541→- Three staggered pulsing dots (0.8→1.2→0.8 over 1.5s, infinite loop)
+   542→- Respects `prefers-reduced-motion` (static dots without animation)
+   543→- `role="status" aria-live="polite"` for screen readers
+   544→- Replaces the old "جارٍ تجهيز السؤال…" plain text
+   545→
+   546→**7. Empty solutions state** (`src/components/juzoor/solutions-screen.tsx`)
+   547→- New `EmptySolutionsState` component for the edge case when `solutionScores` is empty
+   548→- `SearchX` icon + friendly Arabic message + "ارجع للأسئلة" button
+   549→- Defensive programming (shouldn't happen but handles gracefully)
+   550→
+   551→### Files modified
+   552→- `src/lib/store.ts` — added `ScoreSnapshot` type, `scoreHistory` field, updated `answerQuestion`/`goToPreviousQuestion`/`init`/`partialize`
+   553→- `src/components/juzoor/cause-trajectory-chart.tsx` — NEW file for the sparkline chart
+   554→- `src/components/juzoor/question-screen.tsx` — integrated chart, improved loading state
+   555→- `src/components/juzoor/plan-screen.tsx` — added share button + `buildShareSummary` function
+   556→- `src/components/juzoor/error-boundary.tsx` — NEW file for error boundary
+   557→- `src/components/juzoor/app-shell.tsx` — added skip-to-content link
+   558→- `src/components/juzoor/solutions-screen.tsx` — expandable cards, top-solution badge, count summary, loading/empty states, removed sticky sliders
+   559→- `src/app/page.tsx` — wrapped AppShell in JuzoorErrorBoundary
+   560→
+   561→### Verification results
+   562→- `bun run lint` → exit 0 ✓
+   563→- Dev server: all HTTP 200, no errors ✓
+   564→- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+   565→- Solution priorities: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59 ✓
+   566→- Cause-trajectory chart: renders after 2+ answers, updates with each answer ✓
+   567→- Share plan: toast "تم نسخ ملخص الخطة" appears ✓
+   568→- Solutions expandable: "تفاصيل الحل" expands to show causes + scenarios + steps + metric ✓
+   569→- Top-solution badge: "الأفضل لك" Crown badge on #1 solution ✓
+   570→- Solution count summary: shows "عدد الحلول: 13 — المختار: 3 من 3" ✓
+   571→- Skip-to-content link: present in DOM (sr-only, focusable) ✓
+   572→- Error boundary: wraps the app, would catch render crashes ✓
+   573→- All existing features still work ✓
+   574→
+   575→## Unresolved issues / Risks
+   576→- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values that don't match any clean formula. Final scores match regardless. DO NOT re-tune the formula.
+   577→- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+   578→- **Events are local-only** (partially addressed): Research export works (downloads JSON), but no automatic upload to a server.
+   579→- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+   580→- **Sticky sliders removed**: The sticky weight sliders were causing click interference on the solutions screen (covering table rows). Removed in favor of inline sliders. If sticky is desired in the future, use `scroll-mt-40` on table rows + a shorter sticky height, or a "pin" toggle the user controls.
+   581→
+   582→## Priority recommendations for next phase
+   583→1. **English version toggle**: Add a language toggle in the footer. Requires either duplicate content files or a translation layer. The spec mentions "توسعات لاحقة" (later expansion).
+   584→2. **Expand project domain content**: Add more symptoms, causes, questions, rules, and solutions for the project domain.
+   585→3. **Accessibility audit**: Run a full WCAG AA audit; verify screen reader navigation; add ARIA live regions for dynamic score updates.
+   586→4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size.
+   587→5. **More UI polish**: Add a "restart from specific question" feature; add a progress trajectory on the causes screen showing how scores evolved; add a "compare two solutions side-by-side" view.
+   588→
+   589→---
+   590→Task ID: 14
+   591→Agent: causes-dashboard
+   592→Task: Add review answers capability + progress trajectory recap on causes screen
+   593→
+   594→Work Log:
+   595→- Read context: worklog.md (Tasks 11-13), src/components/juzoor/causes-screen.tsx, src/lib/store.ts, src/components/juzoor/cause-trajectory-chart.tsx, src/lib/engine/index.ts, src/components/juzoor/question-screen.tsx, src/app/globals.css.
+   596→- Added `restartFromQuestion(qid: string)` action to the Zustand store (`src/lib/store.ts`):
+   597→  - Finds the index of `qid` in `engine.answers`; truncates answers BEFORE that question (drops the answer to `qid` itself and all subsequent).
+   598→  - Truncates `scoreHistory` with `filter(s => s.answerIndex < idx)` for robustness.
+   599→  - Clears `forcedNext` and `skippedQuestions` so the engine recomputes fresh from the remaining answers.
+   600→  - Calls `applyRulesAfter` to recompute cause scores, then `getNextQuestion` to pick the next question to show.
+   601→  - If a next question is returned: sets `screen: "questions"`, `currentQuestion: nextQuestion`, `previousScreen: "causes"`.
+   602→  - Defensive: if no next question (shouldn't happen), stays on causes.
+   603→  - Logs the event `restart_from_question` with `{ qid, remainingAnswers }`.
+   604→- Enhanced `src/components/juzoor/causes-screen.tsx`:
+   605→  - New imports: `useReducedMotion` from framer-motion; `ListChecks`, `Pencil`, `TrendingUp` from lucide-react; `Answer` type from engine/types; `CauseTrajectoryChart` from the existing component file.
+   606→  - Added `scoreHistory` and `restartFromQuestion` store selectors; `reviewOpen` local state (defaults collapsed); `causeLabels` memo (causeId → branch) reused as the chart's `causeLabels` prop.
+   607→  - Inserted a new "Score trajectory recap" section between the Ishikawa diagram and the close-causes banner: Card with header "إزاي وصلت للنتيجة دي" + TrendingUp icon + subtitle "شوف إجاباتك أثّرت على درجات الأسباب إزاي على مدار الأسئلة"; if `scoreHistory.length >= 2` renders `CauseTrajectoryChart` with transparent styling, else a muted "مفيش بيانات كافية لعرض التطور" message. Wrapper motion.div respects `prefers-reduced-motion`.
+   608→  - Inserted a new "Review Answers" collapsible section between the cause cards and the "تمام، خليني أشوف الحلول" button: header (ListChecks icon, title "مراجعة إجاباتك", subtitle "عدّل أي إجابة وهنحسب الأسباب من جديد", animated ChevronDown) + `ReviewAnswersList` body. Body shows count line, scrollable list (`scroll-area-juzoor max-h-72 overflow-y-auto pe-1` for 6+ rows), and a footer hint "لما تعدّل إجابة، كل الإجابات اللي بعدها هتتمسح وهنبدأ من نقطة التعديل".
+   609→  - `AnswerReviewRow` component: numbered circle, truncated question text (60 chars + …), chosen option badge (app-primary tint for known answers, dashed muted pill for "مش عارف" via `option.isUnknown`), "تعديل" button (Pencil + label, `aria-label="تعديل إجابة السؤال N"`) calling `restartFromQuestion(answer.qid)`. motion.li entrance with staggered delay; static when `prefers-reduced-motion`.
+   610→- Lint: `bun run lint` exit 0 after each file change. Dev log clean throughout (all HTTP 200, no warnings).
+   611→- Verified via agent-browser (wiped session, walked the worked example Q1=b → Q2B=b → Q3=a → Q4=d → Q5=b → Q6=b → Q9=b):
+   612→  - Causes screen shows the new trajectory recap Card with chart "7 إجابات" + legend الوقت 90%, التشتت 67%, الدافعية 55%. ✓
+   613→  - Cause cards: TIME rank 1 (90%, "عالية", "الأقرب" badge), DIST rank 2 (67%, "متوسطة"), MOT rank 3 (55%, "متوسطة") — worked example §9 preserved. ✓
+   614→  - Review Answers section: collapsed by default; expanding shows all 7 rows with question text + chosen option; scroll container applied (`scrollHeight=538, clientHeight=384`). ✓
+   615→  - Clicked "تعديل إجابة السؤال 4": transitioned back to questions screen ("السؤال 4 من 10"), question text "غالباً بذاكر إزاي؟", trajectory chart shows "3 إجابات" with recomputed scores. localStorage `engine.answers = [Q1=b, Q2B=b, Q3=a]` — Q4 and onward dropped. Events log has `restart_from_question` with `{ qid: "Q4", remainingAnswers: 3 }`. ✓
+   616→  - Re-answered Q4=d → Q5=b → Q6=b → Q9=b → returned to causes screen: TIME=90, DIST=67, MOT=55 reproduced exactly. ✓
+   617→- All edits use logical properties (`ps-/pe-/ms-/me-`, `start/end`) for RTL. Did NOT touch engine files or content JSON — engine determinism preserved.
+   618→
+   619→Stage Summary:
+   620→- 2 files modified: `src/lib/store.ts` (new `restartFromQuestion` action), `src/components/juzoor/causes-screen.tsx` (new trajectory recap section + review answers collapsible + helper components `ReviewAnswersList`, `AnswerReviewRow`, `truncate`).
+   621→- Causes screen now feels like a complete diagnostic dashboard: cause map (Ishikawa), how-you-got-here (trajectory recap chart), current results (cause cards), and how-to-change (review answers) all in one scrollable view.
+   622→- The new "Review Answers" capability lets the user jump back to any past question and re-answer it; subsequent answers are dropped and the engine recomputes fresh from the remaining answers, returning the user to the questions screen at the chosen question.
+   623→- The trajectory recap reuses the existing `CauseTrajectoryChart` (already maintained on every answer/back); no new data plumbing required.
+   624→- Worked example §9 still produces TIME=90, DIST=67, MOT=55 (verified end-to-end after a round-trip edit). `bun run lint` exit 0.
+   625→
+   626→
+   627→---
+   628→Task ID: 14
+   629→Agent: cron-review (Africa/Cairo)
+   630→Task: QA verification + review answers capability + progress trajectory recap on causes screen + how-it-works welcome section
+   631→
+   632→## Current Project Status (assessment)
+   633→- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+   634→- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+   635→- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+   636→- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states) still work.
+   637→
+   638→## Current goals / completed modifications / verification results
+   639→
+   640→### QA performed
+   641→1. `bun run lint` → exit 0 (clean)
+   642→2. Dev log: only HTTP 200 responses, no errors/warnings
+   643→3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   644→   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   645→   - Rank-1 cause has "الأقرب" badge ✓
+   646→4. Tested causes screen new features: trajectory recap chart present, review answers collapsible present ✓
+   647→5. Tested review answers "تعديل" button: clicked on Q4 → transitioned back to questions screen, re-answered, scores reproduced exactly ✓
+   648→6. Tested welcome "how it works" section: 4-step preview renders with staggered animation ✓
+   649→
+   650→### New features added
+   651→
+   652→**1. "Review Answers" capability** (`src/lib/store.ts` + `src/components/juzoor/causes-screen.tsx`)
+   653→- New store action `restartFromQuestion(qid: string)`:
+   654→  - Truncates `engine.answers` to keep only answers BEFORE the chosen question
+   655→  - Truncates `scoreHistory` to match (via `filter(s => s.answerIndex < idx)`)
+   656→  - Clears `forcedNext` and `skippedQuestions` so engine recomputes fresh
+   657→  - Calls `applyRulesAfter` → `getNextQuestion`, transitions to `screen: "questions"`
+   658→  - Logs `restart_from_question` event with `{ qid, remainingAnswers }`
+   659→- New `ReviewAnswersList` component on causes screen (inside a Collapsible):
+   660→  - Header: `ListChecks` icon, "مراجعة إجاباتك" title, "عدّل أي إجابة وهنحسب الأسباب من جديد" subtitle
+   661→  - Count line: "عندك N إجابة. اضغط \"تعديل\" على أي سؤال عشان ترجعله وتغيّره."
+   662→  - Scrollable list (max-h-72 overflow-y-auto with scroll-area-juzoor) of `AnswerReviewRow` components
+   663→  - Each row: numbered circle (1-based), truncated question text, chosen-option badge (muted/dashed for "مش عارف"), "تعديل" button with Pencil icon
+   664→  - Clicking "تعديل" calls `restartFromQuestion(answer.qid)`
+   665→  - Hint at bottom: "لما تعدّل إجابة، كل الإجابات اللي بعدها هتتمسح وهنبدأ من نقطة التعديل"
+   666→  - Staggered framer-motion entrance, respects prefers-reduced-motion
+   667→
+   668→**2. Progress trajectory recap** (`src/components/juzoor/causes-screen.tsx`)
+   669→- New section on causes screen between Ishikawa diagram and cause cards:
+   670→  - Card with `TrendingUp` icon, header "إزاي وصلت للنتيجة دي" (How you got here)
+   671→  - Subtitle: "شوف إجاباتك أثّرت على درجات الأسباب إزاي على مدار الأسئلة"
+   672→  - Reuses existing `CauseTrajectoryChart` component with `scoreHistory` + `causeLabels`
+   673→  - Falls back to muted "مفيش بيانات كافية لعرض التطور" when scoreHistory.length < 2
+   674→- Shows the same sparkline chart from the question screen, giving the user a recap of their journey
+   675→
+   676→**3. "How it works" onboarding section** (`src/components/juzoor/welcome-screen.tsx`)
+   677→- New section on welcome screen between intro paragraph and domain selector:
+   678→  - Card with `ListChecks` icon, "الرحلة في 4 خطوات" title
+   679→  - 4 `StepRow` items with staggered entrance animation (x: 10 → 0, delay 0.2 + num*0.06):
+   680→    1. Lightbulb icon — "اختار المشكلة" — "من قائمة الأعراض الظاهرة"
+   681→    2. ListChecks icon — "جاوب الأسئلة" — "حتى 10 أسئلة سريعة بأختيارات جاهزة"
+   682→    3. Scale icon — "قارن الحلول" — "أسباب مرتبة وحلول بمقارنة واضحة"
+   683→    4. CalendarDays icon — "ابدأ خطة 7 أيام" — "خطوات صغيرة قابلة للتنفيذ"
+   684→  - Each row: numbered circle (white-on-app-primary) + icon tile (app-primary/10 bg) + title/desc
+   685→  - Helps new users understand the app's flow before starting
+   686→
+   687→### Causes screen new order (top to bottom)
+   688→1. Header (الأسباب المحتملة)
+   689→2. Ishikawa diagram (collapsible, defaults collapsed)
+   690→3. **NEW: Score trajectory recap** (always visible if scoreHistory >= 2)
+   691→4. Close causes banner (conditional)
+   692→5. Low confidence (conditional)
+   693→6. Cause cards
+   694→7. **NEW: Review answers** (collapsible, defaults collapsed)
+   695→8. "تمام، خليني أشوف الحلول" button
+   696→
+   697→### Files modified
+   698→- `src/lib/store.ts` — added `restartFromQuestion` action
+   699→- `src/components/juzoor/causes-screen.tsx` — added trajectory recap section + review answers collapsible
+   700→- `src/components/juzoor/welcome-screen.tsx` — added "how it works" 4-step preview + `StepRow` component
+   701→
+   702→### Verification results
+   703→- `bun run lint` → exit 0 ✓
+   704→- Dev server: all HTTP 200, no errors ✓
+   705→- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+   706→- Solution priorities: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59 ✓
+   707→- Review answers "تعديل" button: transitions back to questions, drops subsequent answers, recomputes ✓
+   708→- Re-answering after edit: scores reproduce exactly ✓
+   709→- Trajectory recap chart: visible on causes screen with 7 data points ✓
+   710→- Welcome "how it works": 4 steps render with staggered animation ✓
+   711→- All existing features still work ✓
+   712→
+   713→## Unresolved issues / Risks
+   714→- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values that don't match any clean formula. Final scores match regardless. DO NOT re-tune the formula.
+   715→- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+   716→- **Events are local-only** (partially addressed): Research export works (downloads JSON), but no automatic upload to a server.
+   717→- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+   718→- **Restart from question doesn't roll back rules fired**: When the user edits an answer, `restartFromQuestion` clears `forcedNext` and `skippedQuestions` but keeps `rulesFired` and `extraEvidence` from the original run. This is intentional (per the existing `goToPreviousQuestion` behavior) to avoid complexity. The scores are recomputed via `applyRulesAfter` which is idempotent for already-fired rules. If this causes issues in edge cases, a future agent could fully reset the engine state on restart.
+   719→
+   720→## Priority recommendations for next phase
+   721→1. **English version toggle**: Add a language toggle in the footer. Requires either duplicate content files or a translation layer.
+   722→2. **Expand project domain content**: Add more symptoms, causes, questions, rules, and solutions for the project domain.
+   723→3. **Accessibility audit**: Run a full WCAG AA audit; verify screen reader navigation; add ARIA live regions for dynamic score updates.
+   724→4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size.
+
+[showing lines 400-724 of 726; use offset=725 with limit to continue reading]

@@ -13,6 +13,9 @@ import {
   Check,
   Sparkles,
   Share2,
+  TrendingUp,
+  Flame,
+  BellRing,
 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
 import { toast } from "sonner";
@@ -20,6 +23,7 @@ import { loadMessages } from "@/lib/content";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { CelebrationBurst } from "./celebration-burst";
 import type { Solution } from "@/lib/engine/types";
 
@@ -34,6 +38,7 @@ export function PlanScreen() {
   const symptomId = useJuzoor((s) => s.engine.symptomId);
   const savePlan = useJuzoor((s) => s.savePlan);
   const exportPlan = useJuzoor((s) => s.exportPlan);
+  const dayCheckins = useJuzoor((s) => s.dayCheckins);
 
   // Celebration state: a token that increments each time the user saves,
   // plus the anchor (viewport coords) where the confetti should burst from.
@@ -163,6 +168,12 @@ export function PlanScreen() {
         </Card>
       ) : (
         <div className="flex flex-col gap-5 print:gap-4">
+          <PlanProgressCard
+            selectedSolutions={selectedSolutions}
+            selectedSolutionIds={selectedSolutionIds}
+            dayCheckins={dayCheckins}
+          />
+          <DailyReminderCard />
           {selectedSolutions.map((sol, idx) => (
             <PlanTimeline key={sol.id} solution={sol} index={idx} />
           ))}
@@ -299,7 +310,12 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
   const steps = solution.steps_ar;
   // Distribute 7 steps across 7 days. If fewer steps, cycle; if more, use first 7.
   const days = Array.from({ length: 7 }, (_, i) => steps[i % steps.length] ?? steps[0]);
-  const [checked, setChecked] = React.useState<boolean[]>(() => Array(7).fill(false));
+  // Persisted check-in state — survives reload, feeds the progress summary card.
+  const dayCheckins = useJuzoor((s) => s.dayCheckins);
+  const toggleDayCheckin = useJuzoor((s) => s.toggleDayCheckin);
+  const checked = days.map((_, dayIdx) =>
+    Boolean(dayCheckins[`${solution.id}-${dayIdx}`]?.completed),
+  );
   const [justChecked, setJustChecked] = React.useState<number | null>(null);
   const estMinutes = Math.max(20, solution.dailyMinutes || 20);
 
@@ -308,12 +324,10 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
 
   const handleCheck = (dayIdx: number, v: boolean | "indeterminate") => {
     const next = Boolean(v);
-    setChecked((prev) => {
-      const arr = [...prev];
-      arr[dayIdx] = next;
-      return arr;
-    });
-    if (next && !prefersReducedMotion) {
+    // Only fire the celebratory overlay when transitioning to "checked".
+    const wasChecked = checked[dayIdx];
+    toggleDayCheckin(solution.id, dayIdx);
+    if (next && !wasChecked && !prefersReducedMotion) {
       setJustChecked(dayIdx);
       window.setTimeout(() => setJustChecked(null), 700);
     }
@@ -402,6 +416,165 @@ function PlanTimeline({ solution, index }: { solution: Solution; index: number }
           {solution.successMetric_ar}
         </p>
       </div>
+    </motion.div>
+  );
+}
+
+// ============================================================
+// PlanProgressCard — living progress tracker shown above the
+// per-solution timelines. Sums completed days across all
+// selected solutions, animates a progress bar, shows a streak
+// indicator, and celebrates 100% completion.
+// ============================================================
+
+interface PlanProgressCardProps {
+  selectedSolutions: Solution[];
+  selectedSolutionIds: string[];
+  dayCheckins: Record<string, { completed: boolean; completedAt?: number }>;
+}
+
+function PlanProgressCard({
+  selectedSolutions,
+  selectedSolutionIds,
+  dayCheckins,
+}: PlanProgressCardProps) {
+  const totalDays = Math.max(1, selectedSolutions.length * 7);
+
+  // Count completed check-ins among the selected solutions only.
+  // Key format is `${solutionId}-${dayIdx}` — solution IDs use
+  // underscores, so we split on the last hyphen only to be safe.
+  const completedDays = Object.entries(dayCheckins).reduce((acc, [key, c]) => {
+    if (!c.completed) return acc;
+    const lastDash = key.lastIndexOf("-");
+    const solId = lastDash >= 0 ? key.slice(0, lastDash) : key;
+    if (!selectedSolutionIds.includes(solId)) return acc;
+    return acc + 1;
+  }, 0);
+
+  const pct = Math.round((completedDays / totalDays) * 100);
+  const isComplete = completedDays === totalDays && selectedSolutions.length > 0;
+
+  // Streak: walking from the highest dayIdx with any completion
+  // backwards through dayIdxes, counting consecutive dayIdxes that
+  // have at least one completed check-in across the selected solutions.
+  const streak = React.useMemo(() => {
+    if (selectedSolutions.length === 0) return 0;
+    const solIds = selectedSolutions.map((s) => s.id);
+    // For each dayIdx 0..6, mark whether at least one selected solution has it completed.
+    const dayHasCompletion = (dayIdx: number) =>
+      solIds.some((id) => dayCheckins[`${id}-${dayIdx}`]?.completed);
+    // Find the highest dayIdx with a completion.
+    let topDay = -1;
+    for (let d = 6; d >= 0; d--) {
+      if (dayHasCompletion(d)) { topDay = d; break; }
+    }
+    if (topDay === -1) return 0;
+    let s = 0;
+    for (let d = topDay; d >= 0; d--) {
+      if (dayHasCompletion(d)) s++;
+      else break;
+    }
+    return s;
+  }, [selectedSolutions, dayCheckins]);
+
+  const showStreak = streak >= 3;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className={`no-print print:hidden rounded-2xl border p-4 flex flex-col gap-3 ${
+        isComplete
+          ? "bg-app-success/10 border-app-success/40"
+          : "bg-card border-border"
+      }`}
+      aria-label="تقدّمك في الخطة"
+    >
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 size-8 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center">
+          <TrendingUp className="size-4" aria-hidden="true" />
+        </span>
+        <div className="flex-1 flex flex-col">
+          <h2 className="text-sm font-bold text-app-text leading-tight">
+            تقدّمك في الخطة
+          </h2>
+          <p className="text-xs text-app-secondary leading-relaxed mt-0.5">
+            علام على الخطوة كل ما تخلّصها — التقدّم بيتسجّل تلقائياً
+          </p>
+        </div>
+        {isComplete ? (
+          <Sparkles className="size-5 text-app-success shrink-0" aria-hidden="true" />
+        ) : showStreak ? (
+          <Flame className="size-5 text-amber-500 shrink-0" aria-hidden="true" />
+        ) : null}
+      </div>
+
+      {isComplete ? (
+        <div className="bg-app-success/15 border border-app-success/40 rounded-xl p-3 flex items-center gap-2.5">
+          <Sparkles className="size-5 text-app-success shrink-0" aria-hidden="true" />
+          <p className="text-sm font-semibold text-app-text leading-relaxed">
+            أحسنت! خلّصت كل أيام الخطة 🎉
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Progress
+            value={pct}
+            className="h-2.5 bg-app-muted"
+            aria-label={`نسبة الإنجاز: ${pct}%`}
+          />
+          <div className="flex items-center justify-between text-xs text-app-secondary">
+            <span className="tabular-nums">
+              <span className="font-bold text-app-text tabular-nums">{completedDays}</span>
+              {" "}
+              من
+              {" "}
+              <span className="tabular-nums">{totalDays}</span>
+              {" "}
+              يوم
+            </span>
+            <span className="tabular-nums font-bold text-app-primary">{pct}%</span>
+          </div>
+        </div>
+      )}
+
+      {showStreak && !isComplete && (
+        <div className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+          <Flame className="size-4 shrink-0" aria-hidden="true" />
+          <span>
+            🔥 <span className="tabular-nums">{streak}</span> أيام ورا بعض
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ============================================================
+// DailyReminderCard — gentle nudge to come back daily.
+// ============================================================
+
+function DailyReminderCard() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: 0.05 }}
+      className="no-print print:hidden bg-app-primary/5 border border-app-primary/25 rounded-2xl p-4 flex flex-col gap-2"
+    >
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 size-8 rounded-full bg-app-primary/15 text-app-primary flex items-center justify-center">
+          <BellRing className="size-4" aria-hidden="true" />
+        </span>
+        <h2 className="text-sm font-bold text-app-text leading-tight">تذكير يومي</h2>
+      </div>
+      <p className="text-xs text-app-secondary leading-relaxed">
+        كل يوم، افتح التطبيق وعلام على الخطوة اللي خلصتها. الاستمرارية مفتاح النجاح.
+      </p>
+      <p className="text-[11px] text-app-secondary leading-relaxed bg-app-muted/60 rounded-lg px-3 py-2">
+        نصيحة: حط موعد ثابت كل يوم (مثلاً بعد الفجر أو قبل النوم)
+      </p>
     </motion.div>
   );
 }

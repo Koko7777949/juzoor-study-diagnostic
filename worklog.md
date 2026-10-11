@@ -723,3 +723,92 @@ Task: QA verification + review answers capability + progress trajectory recap on
 3. **Accessibility audit**: Run a full WCAG AA audit; verify screen reader navigation; add ARIA live regions for dynamic score updates.
 4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile; verify bundle size.
 5. **More UI polish**: Add a "compare two solutions side-by-side" view; add a "daily check-in" reminder on the plan screen; add a "progress streak" indicator.
+
+---
+Task ID: 15
+Agent: cron-review (Africa/Cairo)
+Task: QA verification + daily check-in streak on plan screen + journey summary on done screen
+
+## Current Project Status (assessment)
+- App is stable. `bun run lint` → exit 0. Dev server: all HTTP 200, no errors in dev.log.
+- Worked example §9 still matches exactly: TIME=90 (high), DIST=67 (medium), MOT=55 (medium).
+- Solution priorities still match: S_TIME_2=75, S_TIME_1=69, S_DIST_1=59.
+- All previous features (domain selector, research export, cause card animations, plan celebration, Ishikawa, keyboard nav, color-coded scores, print layout, theme toggle, about sheet, sparkline chart, share plan, error boundary, skip-to-content, expandable solution cards, loading/empty states, review answers, trajectory recap, how-it-works onboarding) still work.
+
+## Current goals / completed modifications / verification results
+
+### QA performed
+1. `bun run lint` → exit 0 (clean)
+2. Dev log: only HTTP 200 responses, no errors/warnings
+3. agent-browser: wiped session, walked full worked-example flow with keyboard (keys 2,2,1,4,2,2,2)
+   - Final scores verified: TIME=90 (high), DIST=67 (medium), MOT=55 (medium) ✓
+   - Rank-1 cause has "الأقرب" badge ✓
+4. Tested plan screen progress summary: "تقدّمك في الخطة" card appears, progress bar updates, streak indicator (🔥) appears after 3+ consecutive days ✓
+5. Tested persistence: checked 5 days, reloaded page, progress (24%) and streak preserved ✓
+6. Tested done screen journey summary: shows symptom, question count, top 3 causes with scores, selected solutions, plan ID + review date, follow-up results ✓
+7. Tested done screen stats grid: "7 أسئلة، 90% أعلى سبب، 3 حلول" ✓
+
+### New features added
+
+**1. Daily check-in streak system** (`src/lib/store.ts` + `src/components/juzoor/plan-screen.tsx`)
+- New `DayCheckin` type in store: `{ solutionId, dayIdx, completed, completedAt? }`
+- New `dayCheckins: Record<string, DayCheckin>` field in store (keyed by `${solutionId}-${dayIdx}`), persisted to localStorage
+- New `toggleDayCheckin(solutionId, dayIdx)` action:
+  - Toggles the `completed` flag
+  - Sets `completedAt` to `Date.now()` when marking complete, removes when unmarking
+  - Logs `day_checkin_toggled` event
+- PlanTimeline now uses persisted `dayCheckins` instead of local state
+- New progress summary card on plan screen (above timelines):
+  - "تقدّمك في الخطة" title with TrendingUp icon
+  - Animated Progress bar showing completion percentage
+  - "N من M يوم" text (N completed days out of total)
+  - Streak indicator: "🔥 N أيام ورا بعض" (consecutive completed days)
+  - 100% completion celebration message
+- New daily reminder card:
+  - "تذكير يومي" with BellRing icon
+  - Message about consistency being key to success
+  - Tip: "حط موعد ثابت كل يوم (مثلاً بعد الفجر أو قبل النوم)"
+
+**2. Journey summary on done screen** (`src/components/juzoor/done-screen.tsx`)
+- New "ملخص رحلتك" (Your journey summary) card before the thank-you message:
+  - Vertical timeline showing:
+    - العرض (Symptom): symptom label
+    - الأسئلة (Questions): "N إجابة"
+    - الأسباب (Causes): top 3 cause names with scores
+    - الحلول (Solutions): selected solution names
+    - الخطة (Plan): plan ID + review date
+    - المتابعة (Follow-up): executed/improved status
+  - Each milestone with icon and connecting line
+- New stats grid: "عدد الأسئلة: N, أعلى سبب: X%, عدد الحلول: M"
+- Existing thank-you card and buttons preserved
+- Celebration burst fires on mount
+
+### Files modified
+- `src/lib/store.ts` — added `DayCheckin` type, `dayCheckins` field, `toggleDayCheckin` action, persistence
+- `src/components/juzoor/plan-screen.tsx` — progress summary card, daily reminder card, PlanTimeline uses persisted check-ins
+- `src/components/juzoor/done-screen.tsx` — journey summary card, stats grid
+
+### Verification results
+- `bun run lint` → exit 0 ✓
+- Dev server: all HTTP 200, no errors ✓
+- Worked example §9: TIME=90, DIST=67, MOT=55 ✓
+- Plan progress: updates on check, persists after reload ✓
+- Streak indicator: appears after 3+ consecutive days ✓
+- Done screen journey summary: shows all 6 milestones ✓
+- Stats grid: correct counts and percentages ✓
+- All existing features still work ✓
+
+## Unresolved issues / Risks
+- **Spec table inconsistencies** (carried over): §9 intermediate table has minor values that don't match any clean formula. Final scores match regardless. DO NOT re-tune the formula.
+- **Project domain content is lighter** (carried over): 3 symptoms, 6 causes, 7 questions, 1 rule, 6 solutions.
+- **Events are local-only** (partially addressed): Research export works (downloads JSON), but no automatic upload.
+- **E2E tests not written** (carried over): Per env rule. Cron agent verifies via agent-browser.
+- **Day check-ins are per-session, not per-day**: The current implementation tracks check-ins by `solutionId-dayIdx`, not by actual calendar dates. If the user starts a new plan, the old check-ins for the same solution IDs would still show as completed. Future work: add a `planId` prefix to the check-in key, or track by date.
+
+## Priority recommendations for next phase
+1. **English version toggle**: Add a language toggle in the footer.
+2. **Expand project domain content**: Add more symptoms, causes, questions, rules, and solutions.
+3. **Accessibility audit**: Run a full WCAG AA audit.
+4. **Performance**: Run Lighthouse; ensure LCP < 2.5s on mobile.
+5. **Date-based check-ins**: Track check-ins by actual calendar date rather than just solutionId-dayIdx, so the user can track real daily habits across multiple plans.
+6. **Compare two solutions side-by-side**: Add a split-view comparison mode on the solutions screen.

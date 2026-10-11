@@ -68,6 +68,16 @@ export interface ScoreSnapshot {
   scores: Record<string, number>; // causeId -> score (0..100), excluded/hidden causes omitted
 }
 
+// A persisted per-day check-in for a (solution, dayIdx) pair.
+// Replaces the previously-local PlanTimeline checkbox state so that
+// progress survives page reloads and feeds the plan-progress summary card.
+export interface DayCheckin {
+  solutionId: string;
+  dayIdx: number;        // 0..6
+  completed: boolean;
+  completedAt?: number; // timestamp when marked complete (removed when unmarked)
+}
+
 // ============================================================
 // Store
 // ============================================================
@@ -119,6 +129,9 @@ interface JuzoorStore {
   // Score history (snapshots after each answer) — for the sparkline chart
   scoreHistory: ScoreSnapshot[];
 
+  // Persisted per-day plan check-ins — keyed by `${solutionId}-${dayIdx}`
+  dayCheckins: Record<string, DayCheckin>;
+
   // ============================================================
   // Actions
   // ============================================================
@@ -168,6 +181,7 @@ interface JuzoorStore {
   // Plan
   savePlan: () => void;
   exportPlan: (format: "text" | "image" | "pdf") => void;
+  toggleDayCheckin: (solutionId: string, dayIdx: number) => void;
 
   // Follow-up
   submitFollowUp: (f: FollowUpState) => void;
@@ -211,6 +225,7 @@ const initialState = () => ({
   followUp: { executed: null, improved: null } as FollowUpState,
   events: [] as JuzoorEvent[],
   scoreHistory: [] as ScoreSnapshot[],
+  dayCheckins: {} as Record<string, DayCheckin>,
 });
 
 export const useJuzoor = create<JuzoorStore>()(
@@ -244,6 +259,7 @@ export const useJuzoor = create<JuzoorStore>()(
           followUp: { executed: null, improved: null },
           events: [],
           scoreHistory: [],
+          dayCheckins: {},
           startedAt: Date.now(),
         });
         get().logEvent("session_start", {
@@ -590,6 +606,21 @@ export const useJuzoor = create<JuzoorStore>()(
         get().logEvent("plan_exported", { format });
       },
 
+      toggleDayCheckin: (solutionId, dayIdx) => {
+        const key = `${solutionId}-${dayIdx}`;
+        const prev = get().dayCheckins[key];
+        const completed = prev ? !prev.completed : true;
+        const next: DayCheckin = completed
+          ? { solutionId, dayIdx, completed: true, completedAt: Date.now() }
+          : { solutionId, dayIdx, completed: false };
+        set((s) => ({ dayCheckins: { ...s.dayCheckins, [key]: next } }));
+        get().logEvent("day_checkin_toggled", {
+          solutionId,
+          dayIdx,
+          completed,
+        });
+      },
+
       // ============================================================
       // Follow-up
       // ============================================================
@@ -639,6 +670,7 @@ export const useJuzoor = create<JuzoorStore>()(
         followUp: s.followUp,
         events: s.events,
         scoreHistory: s.scoreHistory,
+        dayCheckins: s.dayCheckins,
       }),
       // On rehydrate, re-load the content bundle (it's not serializable cleanly)
       onRehydrateStorage: () => (state) => {
