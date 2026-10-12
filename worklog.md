@@ -1416,3 +1416,56 @@ Stage Summary:
 - Repository now has professional documentation visible to visitors
 - Site verified working (lint clean, HTTP 200, worked example matches, screenshot confirmed not blank)
 - All 14 commits pushed successfully
+
+---
+Task ID: 23
+Agent: main
+Task: Convert to mobile app (Capacitor + PWA) + add features + GitHub release
+
+Work Log:
+- Installed Capacitor packages (@capacitor/core, @capacitor/cli, @capacitor/android)
+- Created capacitor.config.ts with:
+  - appId: com.juzoor.app
+  - appName: جذور
+  - webDir: out (static export directory)
+  - Android background color and scheme
+- Created next.config.mobile.ts for static export (output: "export", trailingSlash: true)
+- Updated next.config.ts: added images.unoptimized for static export compatibility
+- Added mobile build scripts to package.json:
+  - build:mobile, cap:add:android, cap:sync, cap:open:android, apk:debug, apk:release
+- Created PWA manifest (public/manifest.json) with:
+  - Arabic app name, RTL direction, standalone display
+  - Theme color #0F6766, background #F8FAFC
+  - 192x192 and 512x512 maskable icons
+  - Shortcut: "ابدأ رحلة جديدة"
+- Generated app icons (public/icon-192.png, public/icon-512.png, public/favicon-32.png):
+  - Teal rounded rectangle background (#0F6766)
+  - White stem + mint leaves (#5FE9B0) = sprout/seedling
+  - Arabic "ج" letter in center (if font available)
+- Created InstallPrompt component:
+  - Listens for beforeinstallprompt event
+  - Shows install banner with "نزّل التطبيق" button
+  - Dismissed state persisted in localStorage
+  - Hidden when already installed (display-mode: standalone)
+- Added Web Share API on done screen:
+  - "شارك رحلتك" button with Share2 icon
+  - Uses navigator.share() on mobile, clipboard fallback on desktop
+  - Shares: symptom, question count, top cause, solution count
+- Updated viewport: maximumScale=1, userScalable=false, viewportFit="cover"
+  - App-like feel: no zoom, full-bleed display
+- Updated layout metadata: manifest, appleWebApp (capable+title), formatDetection
+- Updated .gitignore: excluded /android/, /out/, next.config.mobile.ts, keystore files
+- Committed: "feat: mobile app support (Capacitor + PWA) + share feature"
+- Pushed to GitHub (after rebase): commit 3a3ecf8
+- Created GitHub release v1.0.0 with full Arabic release notes
+  - URL: https://github.com/Koko7777949/juzoor-study-diagnostic/releases/tag/v1.0.0
+  - Tag: v1.0.0, Release ID: 410730665
+  - Release notes cover: features, APK build instructions, worked example, privacy
+
+Stage Summary:
+- App is now a PWA (installable on mobile) with Capacitor configured for APK builds
+- New features: InstallPrompt banner, Web Share API, app icons, PWA manifest
+- Viewport optimized for app-like feel (no zoom, viewport-fit cover)
+- All mobile build scripts documented in package.json
+- GitHub release v1.0.0 created with comprehensive Arabic release notes
+- Lint passes, app loads correctly, worked example verified
