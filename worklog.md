@@ -1469,3 +1469,40 @@ Stage Summary:
 - All mobile build scripts documented in package.json
 - GitHub release v1.0.0 created with comprehensive Arabic release notes
 - Lint passes, app loads correctly, worked example verified
+
+---
+Task ID: 24
+Agent: main
+Task: Remove web repo release + make web repo distinct from mobile repo
+
+Work Log:
+- Deleted the v1.0.0 release from Koko7777949/juzoor-web (HTTP 204)
+- Deleted the v1.0.0 tag from juzoor-web (HTTP 204)
+- Made the web repo distinct from the mobile repo:
+  - Removed public/manifest.json (PWA manifest)
+  - Removed public/icon-192.png, icon-512.png, favicon-32.png (PWA app icons)
+  - Removed src/components/juzoor/install-prompt.tsx (PWA install banner)
+  - Removed InstallPrompt import and usage from app-shell.tsx
+  - Reverted layout.tsx: no manifest link, no appleWebApp, standard zoomable viewport
+  - No Capacitor config, no next.config.mobile.ts, no mobile build scripts
+- Created a completely new README.md (271 lines) for the web repo with:
+  - Comparison table: Web App vs Mobile App differences
+  - Full feature list (9 screens, all capabilities)
+  - Tech stack table
+  - Quick start guide
+  - Project structure tree
+  - Verification table (worked example)
+  - Design system (colors, typography)
+  - Privacy section
+  - Domains section (study + project)
+  - Link to mobile repo
+- Updated package.json: name=juzoor-web, added description
+- Committed: "refactor: make web app distinct from mobile app"
+- Pushed to GitHub: commit 416bec0
+
+Stage Summary:
+- juzoor-web repo: 0 releases, 0 tags, 2 commits, distinct from mobile
+- juzoor-study-diagnostic repo: 1 release (v1.0.0), intact
+- Web repo has no PWA files, no Capacitor, standard viewport
+- Mobile repo has PWA manifest, Capacitor config, app-like viewport, install prompt
+- Both repos share the same core app but are clearly differentiated
