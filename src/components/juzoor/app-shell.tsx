@@ -44,6 +44,7 @@ import { ScenariosScreen } from "./scenarios-screen";
 import { PlanScreen } from "./plan-screen";
 import { FollowUpScreen } from "./followup-screen";
 import { DoneScreen } from "./done-screen";
+import { InstallPrompt } from "./install-prompt";
 
 const SCREEN_ORDER: Screen[] = [
   "welcome",
@@ -180,6 +181,9 @@ export function AppShell() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* PWA install prompt (mobile only, appears when installable) */}
+      <InstallPrompt />
 
       {/* Sticky footer */}
       <footer className="relative z-10 mt-auto pt-3 pb-safe px-4 bg-app-bg border-t border-app-primary/10 no-print print:hidden">

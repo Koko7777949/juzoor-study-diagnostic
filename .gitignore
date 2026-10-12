@@ -57,3 +57,17 @@ server.log
 
 # Agent context files (work-in-progress notes)
 /agent-ctx/
+
+# Capacitor / Android
+/android/
+/android/app/build/
+/android/.gradle/
+/android/local.properties
+*.keystore
+*.jks
+
+# Mobile build output
+/out/
+
+# Next.js config for mobile (temporary)
+next.config.mobile.ts

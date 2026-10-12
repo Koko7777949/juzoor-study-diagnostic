@@ -1,0 +1,35 @@
+{
+  "name": "جذور — حلل مشكلتك الدراسية",
+  "short_name": "جذور",
+  "description": "تطبيق جذور يرشدك من المشكلة الظاهرة إلى أقرب سبب، ثم يقارن الحلول ويرسم لك خطة صغيرة قابلة للتنفيذ خلال 7 أيام.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0F6766",
+  "categories": ["education", "productivity", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ابدأ رحلة جديدة",
+      "short_name": "ابدأ",
+      "description": "ابدأ تشخيص جديد لمشكلة دراسية",
+      "url": "/?action=start"
+    }
+  ]
+}

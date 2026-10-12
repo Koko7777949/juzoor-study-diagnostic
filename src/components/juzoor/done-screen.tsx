@@ -13,9 +13,11 @@ import {
   Calendar,
   MessageSquareReply,
   Repeat,
+  Share2,
   type LucideIcon,
 } from "lucide-react";
 import { useJuzoor } from "@/lib/store";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CelebrationBurst } from "./celebration-burst";
@@ -117,6 +119,24 @@ export function DoneScreen() {
   );
 
   const topCausePct = topCauses[0]?.score ?? 0;
+
+  const handleShare = async () => {
+    const shareText = `🌱 خلصت رحلتي على جذور!\n\nالعرض: ${symptomLabel ?? "مشكلة دراسية"}\nعدد الأسئلة: ${answers.length}\nأعلى سبب: ${topCauses[0]?.label ?? "—"} (${topCauses[0]?.score ?? 0}%)\nالحلول المختارة: ${selectedSolutions.length}\n\nجذور — نظّم وقتك، افهم نفسك`;
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "جذور — رحلتي الدراسية",
+          text: shareText,
+        });
+      } catch {
+        // User cancelled — no action needed
+      }
+    } else if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(shareText);
+      toast.success("تم نسخ ملخص رحلتك");
+    }
+  };
 
   return (
     <div className="max-w-md mx-auto px-4 pt-8 pb-12 flex flex-col gap-5">
@@ -321,6 +341,15 @@ export function DoneScreen() {
           >
             <Repeat className="size-4" aria-hidden="true" />
             جرّب تاني بنفس المجال
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="touch-target h-11 border-app-accent/50 text-app-primary hover:bg-app-accent/10"
+            onClick={handleShare}
+          >
+            <Share2 className="size-4" aria-hidden="true" />
+            شارك رحلتك
           </Button>
           <Button
             type="button"

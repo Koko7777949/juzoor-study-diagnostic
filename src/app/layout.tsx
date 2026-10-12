@@ -17,19 +17,30 @@ export const metadata: Metadata = {
   keywords: ["جذور", "دراسة", "تنظيم وقت", "تشخيص دراسي", "طلاب", "مذاكرة", "امتحانات"],
   authors: [{ name: "Koko7777949" }],
   repository: "https://github.com/Koko7777949/juzoor-study-diagnostic",
+  manifest: "/manifest.json",
   openGraph: {
     title: "جذور | حلل مشكلتك الدراسية خطوة بخطوة",
     description: "تطبيق جذور يرشدك من المشكلة الظاهرة إلى أقرب سبب، ثم يقارن الحلول ويرسم لك خطة صغيرة قابلة للتنفيذ خلال 7 أيام.",
     type: "website",
     locale: "ar_EG",
   },
+  appleWebApp: {
+    capable: true,
+    title: "جذور",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: "#0F6766",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
